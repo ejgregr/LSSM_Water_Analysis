@@ -4,9 +4,10 @@
 ############################################################################----
 
 # Load early version of discrete sample data. Allow read_excel() to guess types. Does a good job so far. 
-raw_data <- read_excel( paste0( source_dir, '/BKP_Metadata_EdModified_ver2025Aug22.xls' ))
+raw_water <- read_excel( paste0( source_dir, '/Discrete_sample_data/BKP_Metadata_EdModified_ver2025Aug22.xls' ))
+
 # see raw data column names 
-names( raw_data)
+names( raw_water)
 
 # Pull and simplify names of a relevant subset of data
 clean_data <- raw_data[, c("Station_ID", "Collection_Date", "Collection_Time_PST",

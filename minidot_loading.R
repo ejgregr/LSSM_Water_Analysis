@@ -1,8 +1,13 @@
-#### MOORING DATA LOADING and VISUALIZATION ###
+#### MINIDOT DATA LOADING and VISUALIZATION ###
 # Significant bits of this code, particularly string processing, were provided by ChatGPT. 
 # Updated: Oct 30, 2025
 ############################################################################----
 
+# MiniDot includes temperature and DO
+
+# 4 sensor folders. 2 for each mooring.
+# each folder has a txt file for each day. There are some summary files
+# Ugh. 
 
 #------ Data loading section ----
 # Wiley has inconsistent naming for the monthly files so takes a few steps

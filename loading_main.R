@@ -12,7 +12,7 @@
 #================================== Load required packages =================================
 
 # check for any required packages that aren't installed and install them
-required.packages <- c( "readxl", "ggplot2", "dplyr", "stringr", "lubridate", "ggtext",
+required.packages <- c( "readxl", "readr", "ggplot2", "dplyr", "stringr", "lubridate", "ggtext",
                         "RColorBrewer", "rmarkdown", "knitr", "tinytex", "kableExtra",
                         "patchwork" )
 
@@ -28,11 +28,11 @@ getRversion()
 
 # Clear environment and get today's date (for saving files)
 rm(list = ls(all = T))
-today <- format(Sys.Date(), "%Y-%m-%d")
+tooday <- format(Sys.Date(), "%Y-%m-%d")
 
 #======================== Directories and constants ===========================
 # Will be created if they don't exist.
-source_dir  <- 'D:/Dropbox/SciTech/Broughton/Analyses'
+source_dir  <- 'C:/Data/Git/LSSM_Water_Analysis/source_data'
 results_dir <- 'C:/Data/Git/LSSM_Water_Analysis/Results'
 
 # Projections as EPSG codes for when we need to map the sample locations
@@ -40,7 +40,11 @@ albers_crs <- 3005 # Or for newer datasets: albers_crs <- 3153
 UTM_crs    <- 26909 # For Zone 9N NAD83. Or for WGS84: 32609
 
 
-
-
-
+outname <- paste0("Broughton_Water_Analysis_", tooday) 
+rmarkdown::render(
+  "water_chemistry_report.Rmd",
+  output_format = 'pdf_document',
+  output_dir    = results_dir,
+  output_file = outname
+)
 

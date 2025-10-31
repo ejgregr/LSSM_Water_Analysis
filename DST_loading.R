@@ -1,8 +1,14 @@
-#### MOORING DATA LOADING and VISUALIZATION ###
+#### DST DATA LOADING and VISUALIZATION ###
 # Significant bits of this code, particularly string processing, were provided by ChatGPT. 
 # Updated: Oct 30, 2025
 ############################################################################----
 
+# DST includes depth, temperature, salinity, and conductivity
+
+# 4 sensor folders. 2 for each mooring.
+# Each sensor (folder) has 4 xlsx files. 
+# xlsx files available with Date and time in some decimal format.
+# Sigh.
 
 #------ Data loading section ----
 # Wiley has inconsistent naming for the monthly files so takes a few steps
