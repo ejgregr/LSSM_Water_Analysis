@@ -3,106 +3,110 @@
 # Updated: Oct 30, 2025
 ############################################################################----
 
-# DST includes depth, temperature, salinity, and conductivity
-
-# 4 sensor folders. 2 for each mooring.
-# Each sensor (folder) has 4 xlsx files. 
-# xlsx files available with Date and time in some decimal format.
-# Sigh.
+# DST collected via the Star-ODDI sensor includes depth, temperature, salinity, and conductivity
+# Four Star-Oddis were deployed in total, a primary in a cage, and a secondary without 
+# Focal 1 = S12074, Focal 2 = S12666
+# Ref 1   = S12665; Ref 2  =  S12668 
 
 #------ Data loading section ----
-# Wiley has inconsistent naming for the monthly files so takes a few steps
-# We are using the matlab files, not the text files. 
+# After trying to load xlsx files in a few ways, settled on using preprocessed, Matlab
+# .txt files created by Wiley for his preliminary plots.
 
-# get all the files ... 
-co2_files <- list.files( paste0( source_dir, '/CO2Pro' ))
+# Location of sensor folders ... 
+oddi_dir <- paste0( source_dir, '/DST' )
 
-# separate into focal and reference moorings ... 
-focal_files <- co2_files[ grepl("kelp", co2_files, ignore.case = TRUE) &
-                          !grepl("matlab", co2_files, ignore.case = TRUE) ]
+# The individual sensor data files ... 
+ffocal1 <- '/S12074/kelp_DST_matlab_test.txt'
+ffocal2 <- '/S12666/kelp_DST_matlab.txt'
 
-ref_files  <- co2_files[ grepl("ref", co2_files, ignore.case = TRUE) &
-                         !grepl("matlab", co2_files, ignore.case = TRUE) ]
+fref1   <- '/S12665/ref_DST_matlab_test.txt'
+#fref2   <- '/S12665/ref_DST_matlab.txt'     
+# not in the expected subdir or format. used xls files directly.
 
-# extend file names with path  ... 
-focal_files_full <- file.path( paste0( source_dir, '/CO2Pro/', focal_files) )
-ref_files_full   <- file.path( paste0( source_dir, '/CO2Pro/', ref_files) )
+clean_names <- c( "excel_date", "Temp", "Depth", "Salinity", "Conductivity", "Sound_Velocity")
 
-# define the columns to keep ... 
-cols_to_keep <- c("Year", "Month", "Day", "Hour", "Minute", "Second", "CO2")
+# Build the focal site dataframe ... 
+focal_DST1 <- read.delim( paste0(oddi_dir, ffocal1) )
+focal_DST2 <- read.delim( paste0(oddi_dir, ffocal2) )
 
-# final data loading ... 
-focal_dat <- load_and_bind( focal_files_full, cols_to_keep )
-ref_dat   <- load_and_bind( ref_files_full, cols_to_keep )
+# tidy column names ... 
+names(focal_DST1) <- clean_names
+names(focal_DST2) <- clean_names
+# add date/time stamp
+focal_DST1$DateTime <- as.POSIXct( (focal_DST1$excel_date - 25569) * 86400,
+                                    origin = "1970-01-01", tz = "UTC" )
+focal_DST2$DateTime <- as.POSIXct( (focal_DST2$excel_date - 25569) * 86400,
+                                  origin = "1970-01-01", tz = "UTC" )
+
+# Build the reference site dataframe ... 
+ref_DST1 <- read.delim( paste0(oddi_dir, fref1) )
+ref_DST2 <- rbind( read_xls( paste0( oddi_dir, '/S12665/6S12665.xls' )),
+                   read_xls( paste0( oddi_dir, '/S12665/7S12665.xls' )),
+                   read_xls( paste0( oddi_dir, '/S12665/8S12665.xls' )),
+                   read_xls( paste0( oddi_dir, '/S12665/9S12665.xls' )) )
+
+# tidy column names ... 
+names(ref_DST1) <- clean_names
+names(ref_DST2) <- clean_names
+
+# add date/time stamp
+ref_DST1$DateTime <- as.POSIXct( (ref_DST1$excel_date - 25569) * 86400,
+                                  origin = "1970-01-01", tz = "UTC" )
+ref_DST2$DateTime <- as.POSIXct( (ref_DST2$excel_date - 25569) * 86400,
+                                 origin = "1970-01-01", tz = "UTC" )
+
+# Check an single data set ... 
+ggplot(x, aes(x = DateTime)) +
+  geom_line(aes(y = Temp)) +
+  labs(
+    x = "Date/Time",
+    y = "Temperature (°C)",
+    title = "Temperature Over Time"
+  ) +
+  theme_bw()
+
+#---- Data cleaning ---- 
+
+# Apply (some of) Wiley's windows from the MatLab script
+#==> NOTE that the moorings would ideally have their own windows.
+trim_win <- data.frame(
+  start = c( 739780.71140319, 739780.900314626, 739780.900277715, 739808.713883097,
+             739854.813608523,739854.828527756, 739876.703932703,  739876.958356482 ),
+  end = c( 739780.733188733, 739780.907080802, 739780.936459367, 739808.769629938,
+           739854.837604885, 739854.887540078, 739876.969823448, 0 )
+)
+
+intervals_to_posix( trim_win )
 
 
-# Utility to show the header row in each of the file sets.
-for (f in ref_files_full) {
-  cat("\n", f, ":\n")           # print the filename
-  cat(readLines(f, n = 1), "\n")  # print only the first line
-}
+
+# Trim the DST data to the above windows
+tfocal_DST1 <- trim_by_matlab_windows( focal_DST1, trim_win )
+tfocal_DST2 <- trim_by_matlab_windows( focal_DST2, trim_win )
+tref_DST1   <- trim_by_matlab_windows( ref_DST2, trim_win )
+tref_DST2   <- trim_by_matlab_windows( ref_DST2, trim_win )
+
 
 #---- Data visualization ---- 
 
-# To show CO2 from both moorings add columns with the dataset names and rbind them
-focal_dat$Dataset <- "Focal"
-ref_dat$Dataset  <- "Reference"
-plot_dat <- rbind(focal_dat, ref_dat)
-
-# This shows the early period where the reference CO2Pro was too tight. 
-full_plot( plot_dat )
-
-# Remove the offending bit of the time series
-ref_dat <- ref_dat[ ref_dat$Timestamp > as.POSIXct("2025-07-15", tz = "UTC"), ]
-
-# Plot it again.
-plot_dat <- rbind(focal_dat, ref_dat)
-full_plot( plot_dat )
-
-# Now save the focal data to a different df, and shorten to match reference.
-# This now sets us up for a comparative study where possible, and also 
-# for looking at the full timeseries of the focal site
-full_focal_dat <- focal_dat
-
-# Remove the offending ref bit from the focal time series
-focal_dat <- focal_dat[ focal_dat$Timestamp > as.POSIXct("2025-07-15", tz = "UTC"), ]
-
-# Plot it again.
-plot_dat <- rbind(focal_dat, ref_dat)
-full_plot( plot_dat )
-
-# Lets have a quick look at the difference
-diff_dat <- merge(
-  focal_dat[, c("Timestamp", "CO2")],
-  ref_dat[,   c("Timestamp", "CO2")],
-  by = "Timestamp",
-  suffixes = c("_focal", "_ref")
-)
-
-# now add the difference column and plot it
-diff_dat$CO2_diff <- diff_dat$CO2_focal - diff_dat$CO2_ref
-plot_diff( diff_dat )
-
-###---> Stop cuz somehow (likely bc of the merge) there are duplicates in diff_dat.
-
-# Lets try and have a quick look at some variability. 
-
-focal_hr  <- hourly_stats( focal_dat )
-focal_day <- daily_stats( focal_dat )
-
-sfact <- 1
-#ggplot(focal_hr, aes(x = Hour, y = CO2_mean)) +
-ggplot(focal_day, aes(x = Date, y = CO2_mean)) +
-  geom_ribbon(aes(ymin = CO2_mean - sfact*CO2_sd, ymax = CO2_mean + sfact*CO2_sd),
-              fill = "gray60", alpha = 0.4) +
-  geom_line(color = "blue", linewidth = .5) +
-  scale_y_log10() +
+#---- Show all data ----
+ggplot() +
+  geom_line(data = tfocal_DST1, aes(x = DateTime, y = Temp, color = "F1"),   linewidth = 0.7) +
+  geom_line(data = tfocal_DST2, aes(x = DateTime, y = Temp, color = "F2"),  linewidth = 0.7) +
+  geom_line(data = tref_DST1,   aes(x = DateTime, y = Temp, color = "R1"), linewidth = 0.7) +
+  geom_line(data = tref_DST2,   aes(x = DateTime, y = Temp, color = "R2"), linewidth = 0.7) +
+  scale_color_manual(values = c("F1" = "red",
+                                "F2" = "blue",
+                                "R1" = "black",
+                                "R2" = "green")) +
   labs(
-    x = "Time (Hourly)",
-    y = "CO₂ (mean ± 1 SD)",
-    title = "Hourly CO₂ Concentration with Variability"
+    x = "Time",
+    y = "Temperature (°C)",
+    title = "Temperature Time Series",
+    color = "Sensor"
   ) +
-  theme_bw()
+  theme_bw() +
+  theme(legend.position = "bottom")
 
 ###---> Stop here. 
 
@@ -110,95 +114,56 @@ ggplot(focal_day, aes(x = Date, y = CO2_mean)) +
 
 
 #-------------- Functions -------------
-# This function loads and combines the 4 files from each mooring to create 
-# the full CO2 time series. There is one annoyance in that the reference site data
-# has one file that is tab delimited, while the other 7 files are comma delimited. 
-# This requires the condiional, delimiter-based read in the function.  
-load_and_bind <- function(files, cols, tz = "UTC") {
-  out <- do.call(rbind, lapply(files, function(f) {
-    
-    # --- Detect delimiter from first line ---
-    first_line <- readLines(f, n = 1)
-    is_comma <- grepl(",", first_line)
-    
-    # --- Read file accordingly ---
-    if (is_comma) {
-      df <- read.csv(f, header = TRUE, check.names = FALSE, stringsAsFactors = FALSE)
-    } else {
-      df <- read.delim(f, header = TRUE, check.names = FALSE, stringsAsFactors = FALSE)
-    }
-    
-    df <- df[-1, , drop = FALSE]                    # drop the formatting row
-    df[] <- lapply(df, type.convert, as.is = TRUE)  # restore numeric types
-    df <- df[, cols, drop = FALSE]                  # keep only needed columns
-    df$Timestamp <- as.POSIXct(sprintf(
-      "%04d-%02d-%02d %02d:%02d:%02d",
-      df$Year, df$Month, df$Day, df$Hour, df$Minute, df$Second
-    ), tz = tz)
-    df
-  }))
-  rownames(out) <- NULL
+
+
+# Trim rows between one or more MATLAB-datenum intervals (inclusive)
+# df must have a POSIXct column named DateTime (ChatGPT)
+trim_by_matlab_windows <- function(df, intervals, tz = "UTC") {
+  stopifnot("DateTime" %in% names(df))
+  # ensure POSIXct and consistent tz
+  df$DateTime <- as.POSIXct(df$DateTime, tz = tz)
+  
+  # helper: MATLAB datenum -> POSIXct
+  m2t <- function(x) as.POSIXct((x - 719529) * 86400,
+                                origin = "1970-01-01", tz = tz)
+  
+  # data bounds
+  tmin <- min(df$DateTime, na.rm = TRUE)
+  tmax <- max(df$DateTime, na.rm = TRUE)
+  
+  # expect a data.frame with columns 'start' and 'end' (numeric MATLAB datenums, 0 allowed)
+  keep <- rep(TRUE, nrow(df))
+  for (i in seq_len(nrow(intervals))) {
+    s_raw <- intervals$start[i]
+    e_raw <- intervals$end[i]
+    s <- if (s_raw == 0) tmin else m2t(s_raw)
+    e <- if (e_raw == 0) tmax else m2t(e_raw)
+    keep <- keep & !(df$DateTime >= s & df$DateTime <= e)
+  }
+  df[keep, , drop = FALSE]
+}
+
+# This displays the intervals defined using MatLab time intervals to readable Posix
+intervals_to_posix <- function(df, intervals, tz = "UTC") {
+  stopifnot("DateTime" %in% names(df))
+  
+  # Ensure DateTime is POSIXct
+  df$DateTime <- as.POSIXct(df$DateTime, tz = tz)
+  
+  # Helper to convert MATLAB datenum to POSIXct
+  m2t <- function(x) as.POSIXct((x - 719529) * 86400,
+                                origin = "1970-01-01", tz = tz)
+  
+  # Bounds of actual data
+  tmin <- min(df$DateTime, na.rm = TRUE)
+  tmax <- max(df$DateTime, na.rm = TRUE)
+  
+  # Convert the intervals
+  out <- intervals
+  out$start_posix <- ifelse(out$start == 0, tmin, m2t(out$start))
+  out$end_posix   <- ifelse(out$end   == 0, tmax, m2t(out$end))
+  
   out
 }
 
-full_plot <-function( plot_dat ){
-  ggplot(plot_dat, aes(x = Timestamp, y = CO2, color = Dataset)) +
-    geom_line(alpha = 0.8) +
-    labs(
-      x = "Time",
-      y = "CO2 (ppm or mg/m³ — whichever applies)",
-      color = "Dataset",
-      title = "CO2 Time Series Comparison"
-    ) +
-    theme_bw()
-}  
 
-plot_diff <-function( plot_dat ){
-  ggplot(plot_dat, aes(x = Timestamp, y = CO2_diff)) +
-    geom_line(color = "black") +
-    geom_hline(yintercept = 0, linetype = "dashed") +
-    labs(
-      x = "Time",
-      y = "CO₂ Difference (Focal − Reference)",
-      title = "CO₂ Difference Over Time"
-    ) +
-    theme_bw()
-}
-
-# Reduces temporal resolution to hourly, and computes mean and sd by hour
-hourly_stats <- function(df) {
-  # Ensure Timestamp is POSIXct
-  df$Timestamp <- as.POSIXct(df$Timestamp)
-  
-  # Create an hourly timestamp (truncate to hour)
-  df$Hour <- as.POSIXct(format(df$Timestamp, "%Y-%m-%d %H:00:00"), tz = attr(df$Timestamp, "tzone"))
-  
-  # Compute mean and sd by hour
-  agg_mean <- aggregate(CO2 ~ Hour, df, mean)
-  agg_sd   <- aggregate(CO2 ~ Hour, df, sd)
-  
-  # Merge results
-  result <- merge(agg_mean, agg_sd, by = "Hour", suffixes = c("_mean", "_sd"))
-  
-  result
-}
-
-# As above but daily.
-daily_stats <- function(df) {
-  # Ensure Timestamp is POSIXct (no harm if it already is)
-  df$Timestamp <- as.POSIXct(df$Timestamp)
-  
-  # Make a daily date column
-  df$Date <- as.Date(df$Timestamp)
-  
-  # Mean per day
-  mean_daily <- aggregate(CO2 ~ Date, df, mean)
-  
-  # SD per day (use 0 if only one sample that day)
-  sd_daily <- aggregate(CO2 ~ Date, df, function(x) if (length(x) > 1) sd(x) else 0)
-  
-  # Merge results
-  result <- merge(mean_daily, sd_daily, by = "Date", suffixes = c("_mean", "_sd"))
-  
-  return(result)
-}

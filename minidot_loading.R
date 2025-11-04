@@ -9,195 +9,148 @@
 # each folder has a txt file for each day. There are some summary files
 # Ugh. 
 
-#------ Data loading section ----
-# Wiley has inconsistent naming for the monthly files so takes a few steps
-# We are using the matlab files, not the text files. 
+#------ Data LOADING section ----
+# Renamed folders based on mooring. 
+# Folders contain two summary files. Simpler to use the tab-delimited ones, with no header.
 
-# get all the files ... 
-co2_files <- list.files( paste0( source_dir, '/CO2Pro' ))
+# Build file names ... 
+mdot_dirs <- list.files( paste0( source_dir, '/minidot' ))
+mdot_all  <- list.files( paste0( source_dir, '/minidot/', mdot_dirs ))
 
-# separate into focal and reference moorings ... 
-focal_files <- co2_files[ grepl("kelp", co2_files, ignore.case = TRUE) &
-                          !grepl("matlab", co2_files, ignore.case = TRUE) ]
+mdot_focal <- mdot_all[ grepl("kelp", mdot_all, ignore.case = TRUE) ]
+mdot_ref   <- mdot_all[ grepl("ref", mdot_all, ignore.case = TRUE) ]
+fnames <- c(mdot_focal, mdot_ref )
 
-ref_files  <- co2_files[ grepl("ref", co2_files, ignore.case = TRUE) &
-                         !grepl("matlab", co2_files, ignore.case = TRUE) ]
+mdot_foc_full <- file.path( paste0( source_dir, '/minidot/', mdot_dirs, '/', fnames) )
 
-# extend file names with path  ... 
-focal_files_full <- file.path( paste0( source_dir, '/CO2Pro/', focal_files) )
-ref_files_full   <- file.path( paste0( source_dir, '/CO2Pro/', ref_files) )
+ref_files <- mdot_foc_full[ grepl("ref", mdot_foc_full, ignore.case = TRUE) ]
+focal_files <- mdot_foc_full[ grepl("focal", mdot_foc_full, ignore.case = TRUE) ]
 
-# define the columns to keep ... 
-cols_to_keep <- c("Year", "Month", "Day", "Hour", "Minute", "Second", "CO2")
+# Build the focal site dataframe ... 
+mdot_focal_dat <- rbind( 
+  read.delim(focal_files[1], header = FALSE, check.names = FALSE, stringsAsFactors = FALSE),
+  read.delim(focal_files[2], header = FALSE, check.names = FALSE, stringsAsFactors = FALSE) )
+  
+mdot_ref_dat <- rbind( 
+  read.delim(ref_files[1], header = FALSE, check.names = FALSE, stringsAsFactors = FALSE),
+  read.delim(ref_files[2], header = FALSE, check.names = FALSE, stringsAsFactors = FALSE) )
 
-# final data loading ... 
-focal_dat <- load_and_bind( focal_files_full, cols_to_keep )
-ref_dat   <- load_and_bind( ref_files_full, cols_to_keep )
+# Assign column names ... 
+mini_head <- c( "Unix_date", "Battery", "Temp", "DO", "DO_sat", "Q")
+names( mdot_focal_dat ) <- mini_head
+names( mdot_ref_dat ) <- mini_head
+
+# And translate the date to POSIXct
+mdot_ref_dat$Timestamp   <-as.POSIXct( mdot_ref_dat$Unix_date )
+mdot_focal_dat$Timestamp <-as.POSIXct( mdot_focal_dat$Unix_date )
 
 
-# Utility to show the header row in each of the file sets.
-for (f in ref_files_full) {
-  cat("\n", f, ":\n")           # print the filename
-  cat(readLines(f, n = 1), "\n")  # print only the first line
-}
-
-#---- Data visualization ---- 
-
-# To show CO2 from both moorings add columns with the dataset names and rbind them
-focal_dat$Dataset <- "Focal"
-ref_dat$Dataset  <- "Reference"
-plot_dat <- rbind(focal_dat, ref_dat)
-
-# This shows the early period where the reference CO2Pro was too tight. 
-full_plot( plot_dat )
-
-# Remove the offending bit of the time series
-ref_dat <- ref_dat[ ref_dat$Timestamp > as.POSIXct("2025-07-15", tz = "UTC"), ]
-
-# Plot it again.
-plot_dat <- rbind(focal_dat, ref_dat)
-full_plot( plot_dat )
-
-# Now save the focal data to a different df, and shorten to match reference.
-# This now sets us up for a comparative study where possible, and also 
-# for looking at the full timeseries of the focal site
-full_focal_dat <- focal_dat
-
-# Remove the offending ref bit from the focal time series
-focal_dat <- focal_dat[ focal_dat$Timestamp > as.POSIXct("2025-07-15", tz = "UTC"), ]
-
-# Plot it again.
-plot_dat <- rbind(focal_dat, ref_dat)
-full_plot( plot_dat )
-
-# Lets have a quick look at the difference
-diff_dat <- merge(
-  focal_dat[, c("Timestamp", "CO2")],
-  ref_dat[,   c("Timestamp", "CO2")],
+#---- Show all data ----
+# Merge by Timestamp
+merged <- merge(
+  mdot_ref_dat[, c("Timestamp", "Temp")],
+  mdot_focal_dat[, c("Timestamp", "Temp")],
   by = "Timestamp",
-  suffixes = c("_focal", "_ref")
+  suffixes = c("_ref", "_focal")
 )
 
-# now add the difference column and plot it
-diff_dat$CO2_diff <- diff_dat$CO2_focal - diff_dat$CO2_ref
-plot_diff( diff_dat )
-
-###---> Stop cuz somehow (likely bc of the merge) there are duplicates in diff_dat.
-
-# Lets try and have a quick look at some variability. 
-
-focal_hr  <- hourly_stats( focal_dat )
-focal_day <- daily_stats( focal_dat )
-
-sfact <- 1
-#ggplot(focal_hr, aes(x = Hour, y = CO2_mean)) +
-ggplot(focal_day, aes(x = Date, y = CO2_mean)) +
-  geom_ribbon(aes(ymin = CO2_mean - sfact*CO2_sd, ymax = CO2_mean + sfact*CO2_sd),
-              fill = "gray60", alpha = 0.4) +
-  geom_line(color = "blue", linewidth = .5) +
-  scale_y_log10() +
+ggplot(merged, aes(x = Timestamp)) +
+  geom_line(aes(y = Temp_ref, color = "Reference")) +
+  geom_line(aes(y = Temp_focal, color = "Focal")) +
   labs(
-    x = "Time (Hourly)",
-    y = "CO₂ (mean ± 1 SD)",
-    title = "Hourly CO₂ Concentration with Variability"
+    x = "Time",
+    y = "Temperature (°C)",
+    color = "Sensor",
+    title = "Temperature Over Time: Reference vs Focal"
   ) +
+  scale_color_manual(values = c("Reference" = "blue", "Focal" = "red")) +
   theme_bw()
 
-###---> Stop here. 
+#------ Data CLEANING section ----
 
+#---- First show all data ----
+
+# Merge by Timestamp
+merged <- merge(
+  mdot_ref_dat[, c("Timestamp", "Temp")],
+  mdot_focal_dat[, c("Timestamp", "Temp")],
+  by = "Timestamp",
+  suffixes = c("_ref", "_focal")
+)
+
+ggplot(merged, aes(x = Timestamp)) +
+  geom_line(aes(y = Temp_ref, color = "Reference")) +
+  geom_line(aes(y = Temp_focal, color = "Focal")) +
+  labs(
+    x = "Time",
+    y = "Temperature (°C)",
+    color = "Sensor",
+    title = "Temperature Over Time: Reference vs Focal"
+  ) +
+  scale_color_manual(values = c("Reference" = "blue", "Focal" = "red")) +
+  theme_bw()
+
+#----- Remove times when sensors were out of the water. ----
+# These are at the start, 
+# end and during mooring service. So:
+# Drop both deployment and recovery days (pre May 25, and post Sept 16), 
+# and also drop the service days: Jun 12, July 10, and Aug 25th. 
+# These data clips can be refined if needed to recover a few more hours of data.
+
+start_date <- as.Date("2025-05-25")
+end_date   <- as.Date("2025-09-16")
+start_date <- as.Date("2025-05-25")
+end_date   <- as.Date("2025-09-16")
+service_days <- as.Date(c("2025-06-12", "2025-07-10", "2025-08-25"))
+
+mdot_ref_dat   <- trim_dates(mdot_ref_dat)
+mdot_focal_dat <- trim_dates(mdot_focal_dat)
+
+# Looking at this range, is it possible the Ref mooring was dry in late May because of tidees?
+# Should look over the entire time series to see what those other peaks are. Like, 
+# can we confirm the date of the June mooring maintenance? If the 12th, then what's going on
+# at the reference site on the 10th? Someone pull it out or what?
+
+plot_range(merged, "2025-05-25", "2025-06-15")
 
 
 
 #-------------- Functions -------------
-# This function loads and combines the 4 files from each mooring to create 
-# the full CO2 time series. There is one annoyance in that the reference site data
-# has one file that is tab delimited, while the other 7 files are comma delimited. 
-# This requires the condiional, delimiter-based read in the function.  
-load_and_bind <- function(files, cols, tz = "UTC") {
-  out <- do.call(rbind, lapply(files, function(f) {
-    
-    # --- Detect delimiter from first line ---
-    first_line <- readLines(f, n = 1)
-    is_comma <- grepl(",", first_line)
-    
-    # --- Read file accordingly ---
-    if (is_comma) {
-      df <- read.csv(f, header = TRUE, check.names = FALSE, stringsAsFactors = FALSE)
-    } else {
-      df <- read.delim(f, header = TRUE, check.names = FALSE, stringsAsFactors = FALSE)
-    }
-    
-    df <- df[-1, , drop = FALSE]                    # drop the formatting row
-    df[] <- lapply(df, type.convert, as.is = TRUE)  # restore numeric types
-    df <- df[, cols, drop = FALSE]                  # keep only needed columns
-    df$Timestamp <- as.POSIXct(sprintf(
-      "%04d-%02d-%02d %02d:%02d:%02d",
-      df$Year, df$Month, df$Day, df$Hour, df$Minute, df$Second
-    ), tz = tz)
-    df
-  }))
-  rownames(out) <- NULL
-  out
-}
 
-full_plot <-function( plot_dat ){
-  ggplot(plot_dat, aes(x = Timestamp, y = CO2, color = Dataset)) +
-    geom_line(alpha = 0.8) +
-    labs(
-      x = "Time",
-      y = "CO2 (ppm or mg/m³ — whichever applies)",
-      color = "Dataset",
-      title = "CO2 Time Series Comparison"
-    ) +
-    theme_bw()
-}  
-
-plot_diff <-function( plot_dat ){
-  ggplot(plot_dat, aes(x = Timestamp, y = CO2_diff)) +
-    geom_line(color = "black") +
-    geom_hline(yintercept = 0, linetype = "dashed") +
-    labs(
-      x = "Time",
-      y = "CO₂ Difference (Focal − Reference)",
-      title = "CO₂ Difference Over Time"
-    ) +
-    theme_bw()
-}
-
-# Reduces temporal resolution to hourly, and computes mean and sd by hour
-hourly_stats <- function(df) {
-  # Ensure Timestamp is POSIXct
-  df$Timestamp <- as.POSIXct(df$Timestamp)
+# Simple function to remove dates 
+trim_dates <- function(df) {
   
-  # Create an hourly timestamp (truncate to hour)
-  df$Hour <- as.POSIXct(format(df$Timestamp, "%Y-%m-%d %H:00:00"), tz = attr(df$Timestamp, "tzone"))
-  
-  # Compute mean and sd by hour
-  agg_mean <- aggregate(CO2 ~ Hour, df, mean)
-  agg_sd   <- aggregate(CO2 ~ Hour, df, sd)
-  
-  # Merge results
-  result <- merge(agg_mean, agg_sd, by = "Hour", suffixes = c("_mean", "_sd"))
-  
-  result
-}
-
-# As above but daily.
-daily_stats <- function(df) {
-  # Ensure Timestamp is POSIXct (no harm if it already is)
-  df$Timestamp <- as.POSIXct(df$Timestamp)
-  
-  # Make a daily date column
   df$Date <- as.Date(df$Timestamp)
   
-  # Mean per day
-  mean_daily <- aggregate(CO2 ~ Date, df, mean)
+  df <- df[df$Date >= start_date & df$Date <= end_date, ]
+  df <- df[! df$Date %in% service_days, ]
   
-  # SD per day (use 0 if only one sample that day)
-  sd_daily <- aggregate(CO2 ~ Date, df, function(x) if (length(x) > 1) sd(x) else 0)
+  df$Date <- NULL   # optional cleanup
+  df
+}
+
+plot_range <- function(df, start_date, end_date) {
   
-  # Merge results
-  result <- merge(mean_daily, sd_daily, by = "Date", suffixes = c("_mean", "_sd"))
+  # Convert date inputs to Date objects (safe even if passed as Date already)
+  start_date <- as.Date(start_date)
+  end_date   <- as.Date(end_date)
   
-  return(result)
+  # Filter by date range
+  df$Date <- as.Date(df$Timestamp)
+  df_sub  <- df[df$Date >= start_date & df$Date <= end_date, ]
+  
+  # Plot
+  library(ggplot2)
+  ggplot(df_sub, aes(x = Timestamp)) +
+    geom_line(aes(y = Temp_ref,   color = "Reference"), linewidth = 0.8) +
+    geom_line(aes(y = Temp_focal, color = "Focal"),     linewidth = 0.8) +
+    labs(
+      x = "Time",
+      y = "Temperature (°C)",
+      color = "Sensor",
+      title = paste0("Temperature Comparison: ", start_date, " to ", end_date)
+    ) +
+    scale_color_manual(values = c("Reference" = "blue", "Focal" = "red")) +
+    theme_bw() +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1))
 }

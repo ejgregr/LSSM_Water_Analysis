@@ -1,4 +1,4 @@
-#### MOORING DATA LOADING and VISUALIZATION ###
+#### CO2 Pro  DATA LOADING and VISUALIZATION ###
 # Significant bits of this code, particularly string processing, were provided by ChatGPT. 
 # Updated: Oct 30, 2025
 ############################################################################----
@@ -84,11 +84,12 @@ plot_diff( diff_dat )
 focal_hr  <- hourly_stats( focal_dat )
 focal_day <- daily_stats( focal_dat )
 
-sfact <- 1
+# For daily, sfact=1 and x=Date, as well as title changes
+sfact <- 100
 #ggplot(focal_hr, aes(x = Hour, y = CO2_mean)) +
-ggplot(focal_day, aes(x = Date, y = CO2_mean)) +
+ggplot(focal_hr, aes(x = Hour, y = CO2_mean)) +
   geom_ribbon(aes(ymin = CO2_mean - sfact*CO2_sd, ymax = CO2_mean + sfact*CO2_sd),
-              fill = "gray60", alpha = 0.4) +
+              fill = "gray20", alpha = 0.4) +
   geom_line(color = "blue", linewidth = .5) +
   scale_y_log10() +
   labs(

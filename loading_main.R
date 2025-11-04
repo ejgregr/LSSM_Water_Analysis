@@ -12,7 +12,7 @@
 #================================== Load required packages =================================
 
 # check for any required packages that aren't installed and install them
-required.packages <- c( "readxl", "readr", "ggplot2", "dplyr", "stringr", "lubridate", "ggtext",
+required.packages <- c( "readxl", "readr", "ggplot2", "tidyr", "dplyr", "stringr", "lubridate", "ggtext",
                         "RColorBrewer", "rmarkdown", "knitr", "tinytex", "kableExtra",
                         "patchwork" )
 

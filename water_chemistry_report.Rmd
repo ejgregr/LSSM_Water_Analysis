@@ -1,0 +1,78 @@
+---
+title: "Broughton Water Project - Chemistry Report"
+author: "EJG"
+date: "2025-10-20"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+setwd("C:/Data/Git/LSSM_Water_Analysis")
+
+# Overview
+
+This report summarises the data collected from two moorings and the discrete water sampling program conducted as part of the Broughton Kelp Water project, funded by the BC Safe Seafood program.
+
+The study area is focused on the sheltered waters of the Broughton Archipelago within Mamalililulla First Nation (MFN) territory (Fig. 1).
+
+```{r StudyArea, echo=FALSE, out.width="100%", fig.align='center', fig.cap="Figure 1. Field sampling locations showing reference sites, kelp bed sites, and mooring locations."}
+knitr::include_graphics( "Results/StudyArea.png" )
+```
+
+# Water sampling
+
+# Discrete data
+These data are provided in the *Discrete_sample_data* folder and contain the following files. 
+
+BKP_Metadata_EdModified_ver2025Aug22.xls:   
+Early discrete sample data. Used to develop loading and initial plotting routines.  
+  
+# Mooring setup
+This information was obtained from sources created by Wiley. The first is a mooring Instrumentation_setup.docx, and more granualar details were found in the Matlab script Broughton_moorings_plots.m, reflecting the adaptation of the sensors over the course of the season.
+  
+Two moorings were deployed on April 24, 2025, one at the focal site (CP) at 1741, and one at the reference site (R8) at 1906. Each mooring had a CO2Pro sensor, a Star-ODDI, and a MiniDOT. Sampling rates were 240 minutes, 3 minutes, and 1 minute respectively.  
+  
+Moorings were serviced Jun 12, July 10, and Aug 25th, and recovered on Sept 17.
+
+Sensor IDs for the reference mooring were: CO2Pro = 43-214-75, Star-ODDI = S12665, and MiniDOT = 801016.  
+Sensor IDs for the focal mooring were: CO2Pro = 43-213-75, Star-ODDI = S12074, and MiniDOT = 315342.
+  
+MiniDOTs on both moorings were replaced July 10 2025 with the following IDs: Reference site = 888141,
+and Focal site = 647102 (by process of elimination, based on Wiley's notes)  
+  
+Two other Star-ODDIs were deployed without housings for redundancy. S12668 was deployed alongside S12665 at the reference site. S12666 deployed alongside S12074 at the focal site.
+
+# Data from moorings
+Data processed by Hakai is provided 4 folders, described below.  
+  
+*CO2Pro folder*:  
+kelp_sensor_august25_2025.txt  
+CO2Pro data from the mooring at the CP focal site. Includes a range of sensor-related data, and for our purposes it has data and time fields, along with CO2 and temperature (assume we want IRGA temperature rather than sensor temperature).  
+
+ref_sensor_august25_2025.txt  
+CO2Pro data from the mooring at the R8 reference site. Includes a range of sensor-related data, and for our purposes it has data and time fields, along with CO2 and temperature (assume we want IRGA temperature rather than sensor temperature).  
+
+*minidot folder*:  
+4 numeric folders. each folder contains a series of date-staped text files. Looks like each day's data are stored in an individual text file. Relevant data in the daily files includes time (in seconds), temperature, and DO (mg/l).
+  
+*DST folder*:  
+
+-------  
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r cars}
+summary(cars)
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
