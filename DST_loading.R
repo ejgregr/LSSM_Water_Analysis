@@ -108,62 +108,6 @@ ggplot() +
   theme_bw() +
   theme(legend.position = "bottom")
 
+
+
 ###---> Stop here. 
-
-
-
-
-#-------------- Functions -------------
-
-
-# Trim rows between one or more MATLAB-datenum intervals (inclusive)
-# df must have a POSIXct column named DateTime (ChatGPT)
-trim_by_matlab_windows <- function(df, intervals, tz = "UTC") {
-  stopifnot("DateTime" %in% names(df))
-  # ensure POSIXct and consistent tz
-  df$DateTime <- as.POSIXct(df$DateTime, tz = tz)
-  
-  # helper: MATLAB datenum -> POSIXct
-  m2t <- function(x) as.POSIXct((x - 719529) * 86400,
-                                origin = "1970-01-01", tz = tz)
-  
-  # data bounds
-  tmin <- min(df$DateTime, na.rm = TRUE)
-  tmax <- max(df$DateTime, na.rm = TRUE)
-  
-  # expect a data.frame with columns 'start' and 'end' (numeric MATLAB datenums, 0 allowed)
-  keep <- rep(TRUE, nrow(df))
-  for (i in seq_len(nrow(intervals))) {
-    s_raw <- intervals$start[i]
-    e_raw <- intervals$end[i]
-    s <- if (s_raw == 0) tmin else m2t(s_raw)
-    e <- if (e_raw == 0) tmax else m2t(e_raw)
-    keep <- keep & !(df$DateTime >= s & df$DateTime <= e)
-  }
-  df[keep, , drop = FALSE]
-}
-
-# This displays the intervals defined using MatLab time intervals to readable Posix
-intervals_to_posix <- function(df, intervals, tz = "UTC") {
-  stopifnot("DateTime" %in% names(df))
-  
-  # Ensure DateTime is POSIXct
-  df$DateTime <- as.POSIXct(df$DateTime, tz = tz)
-  
-  # Helper to convert MATLAB datenum to POSIXct
-  m2t <- function(x) as.POSIXct((x - 719529) * 86400,
-                                origin = "1970-01-01", tz = tz)
-  
-  # Bounds of actual data
-  tmin <- min(df$DateTime, na.rm = TRUE)
-  tmax <- max(df$DateTime, na.rm = TRUE)
-  
-  # Convert the intervals
-  out <- intervals
-  out$start_posix <- ifelse(out$start == 0, tmin, m2t(out$start))
-  out$end_posix   <- ifelse(out$end   == 0, tmax, m2t(out$end))
-  
-  out
-}
-
-

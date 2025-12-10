@@ -4,10 +4,8 @@
 ############################################################################----
 
 # MiniDot includes temperature and DO
-
 # 4 sensor folders. 2 for each mooring.
-# each folder has a txt file for each day. There are some summary files
-# Ugh. 
+# Each folder has a txt file for each day. There are some summary files
 
 #------ Data LOADING section ----
 # Renamed folders based on mooring. 
@@ -106,51 +104,12 @@ service_days <- as.Date(c("2025-06-12", "2025-07-10", "2025-08-25"))
 mdot_ref_dat   <- trim_dates(mdot_ref_dat)
 mdot_focal_dat <- trim_dates(mdot_focal_dat)
 
-# Looking at this range, is it possible the Ref mooring was dry in late May because of tidees?
-# Should look over the entire time series to see what those other peaks are. Like, 
-# can we confirm the date of the June mooring maintenance? If the 12th, then what's going on
-# at the reference site on the 10th? Someone pull it out or what?
+# Looking at this range, is it possible the Ref mooring was dry in late May because of tides?
+# Examine the entire time series to see what those other peaks are. i.e., can we
+# confirm the date of the June mooring maintenance? If the 12th, then what's 
+# going on at the reference site on the 10th? Someone pull it out or what?
 
 plot_range(merged, "2025-05-25", "2025-06-15")
 
 
-
-#-------------- Functions -------------
-
-# Simple function to remove dates 
-trim_dates <- function(df) {
-  
-  df$Date <- as.Date(df$Timestamp)
-  
-  df <- df[df$Date >= start_date & df$Date <= end_date, ]
-  df <- df[! df$Date %in% service_days, ]
-  
-  df$Date <- NULL   # optional cleanup
-  df
-}
-
-plot_range <- function(df, start_date, end_date) {
-  
-  # Convert date inputs to Date objects (safe even if passed as Date already)
-  start_date <- as.Date(start_date)
-  end_date   <- as.Date(end_date)
-  
-  # Filter by date range
-  df$Date <- as.Date(df$Timestamp)
-  df_sub  <- df[df$Date >= start_date & df$Date <= end_date, ]
-  
-  # Plot
-  library(ggplot2)
-  ggplot(df_sub, aes(x = Timestamp)) +
-    geom_line(aes(y = Temp_ref,   color = "Reference"), linewidth = 0.8) +
-    geom_line(aes(y = Temp_focal, color = "Focal"),     linewidth = 0.8) +
-    labs(
-      x = "Time",
-      y = "Temperature (°C)",
-      color = "Sensor",
-      title = paste0("Temperature Comparison: ", start_date, " to ", end_date)
-    ) +
-    scale_color_manual(values = c("Reference" = "blue", "Focal" = "red")) +
-    theme_bw() +
-    theme(axis.text.x = element_text(angle = 45, hjust = 1))
-}
+### FIN.

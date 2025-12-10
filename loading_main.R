@@ -35,6 +35,8 @@ tooday <- format(Sys.Date(), "%Y-%m-%d")
 source_dir  <- 'C:/Data/Git/LSSM_Water_Analysis/source_data'
 results_dir <- 'C:/Data/Git/LSSM_Water_Analysis/Results'
 
+
+source( 'C:/Data/Git/LSSM_Water_Analysis/loading_functions.r')
 # Projections as EPSG codes for when we need to map the sample locations
 albers_crs <- 3005 # Or for newer datasets: albers_crs <- 3153
 UTM_crs    <- 26909 # For Zone 9N NAD83. Or for WGS84: 32609
