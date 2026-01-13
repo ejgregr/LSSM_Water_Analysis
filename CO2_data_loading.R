@@ -28,6 +28,9 @@ cols_to_keep <- c("Year", "Month", "Day", "Hour", "Minute", "Second", "CO2")
 focal_dat <- load_and_bind( focal_files_full, cols_to_keep )
 ref_dat   <- load_and_bind( ref_files_full, cols_to_keep )
 
+difftime( focal_dat[1,]$Timestamp, focal_dat[ dim(focal_dat)[[1]], ]$Timestamp )
+
+
 
 # Utility to show the header row in each of the file sets.
 for (f in ref_files_full) {

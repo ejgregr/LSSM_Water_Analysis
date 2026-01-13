@@ -8,7 +8,8 @@
 # Seems straightforward. :)
 #
 ## Updates:
-
+# 2026/01/13: Loads discrete and mooring data, as well as necessary 2025 conditions
+#   for growth model including tidal currents and light levels. 
 #================================== Load required packages =================================
 
 # check for any required packages that aren't installed and install them
@@ -40,6 +41,12 @@ source( 'C:/Data/Git/LSSM_Water_Analysis/loading_functions.r')
 # Projections as EPSG codes for when we need to map the sample locations
 albers_crs <- 3005 # Or for newer datasets: albers_crs <- 3153
 UTM_crs    <- 26909 # For Zone 9N NAD83. Or for WGS84: 32609
+
+
+
+
+
+
 
 
 outname <- paste0("Broughton_Water_Analysis_", tooday) 
