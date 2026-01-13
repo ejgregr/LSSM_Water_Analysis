@@ -1,4 +1,5 @@
 ##### current data predictions (direction and speed) #####
+# NOTES:
 # Obtained for 2 DFO stations - Wayton Pass and Blackney Pass
 # Data look like:
 # Date      YYYY/MM/DD

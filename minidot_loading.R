@@ -2,6 +2,9 @@
 # Significant bits of this code, particularly string processing, were provided by ChatGPT. 
 # Updated: Oct 30, 2025
 ############################################################################----
+# NOTES:
+# none yet.
+############################################################################
 
 # MiniDot includes temperature and DO
 # 4 sensor folders. 2 for each mooring.

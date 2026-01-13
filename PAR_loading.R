@@ -1,4 +1,11 @@
-library(ggplot2)
+##### Radiation loading - from DSR to PAR #####
+# Created Dec, 2025
+#
+############################################################################
+# NOTES:
+# none yet.
+############################################################################
+
 
 # Directory containing monthly CSVs
 csv_dir <- "GEE_exports"

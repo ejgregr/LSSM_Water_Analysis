@@ -2,6 +2,9 @@
 # Significant bits of this code, particularly string processing, were provided by ChatGPT. 
 # Updated: Oct 30, 2025
 ############################################################################----
+# NOTES:
+# none yet.
+############################################################################
 
 # DST collected via the Star-ODDI sensor includes depth, temperature, salinity, and conductivity
 # Four Star-Oddis were deployed in total, a primary in a cage, and a secondary without 

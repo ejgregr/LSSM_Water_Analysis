@@ -15,7 +15,7 @@ setwd("C:/Data/Git/LSSM_Water_Analysis")
 
 This report summarises the data collected from two moorings and the discrete water sampling program conducted as part of the Broughton Kelp Water project, funded by the BC Safe Seafood program.
 
-The study area is focused on the sheltered waters of the Broughton Archipelago within Mamalililulla First Nation (MFN) territory (Fig. 1).
+The study area is focused on the sheltered waters of the Broughton Archipelago within Mamalilikulla First Nation (MFN) territory (Fig. 1).
 
 ```{r StudyArea, echo=FALSE, out.width="100%", fig.align='center', fig.cap="Figure 1. Field sampling locations showing reference sites, kelp bed sites, and mooring locations."}
 knitr::include_graphics( "Results/StudyArea.png" )

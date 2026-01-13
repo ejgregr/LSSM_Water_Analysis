@@ -1,7 +1,11 @@
 #### DISCRETE SAMPLE LOADING ###
 # Significant bits of this code, particularly string processing, were provided by ChatGPT. 
 # Updated: Oct 20, 2025
-############################################################################----
+############################################################################
+# NOTES:
+# none yet.
+############################################################################
+
 
 # Load early version of discrete sample data. Allow read_excel() to guess types. Does a good job so far. 
 raw_data <- read_excel( paste0( source_dir, '/Discrete_sample_data/BKP_Metadata_EdModified_ver2025Aug22.xls' ))
