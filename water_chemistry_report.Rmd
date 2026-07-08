@@ -49,15 +49,18 @@ Data processed by Hakai is provided 4 folders, described below.
   
 *CO2Pro folder*:  
 kelp_sensor_august25_2025.txt  
-CO2Pro data from the mooring at the CP focal site. Includes a range of sensor-related data, and for our purposes it has data and time fields, along with CO2 and temperature (assume we want IRGA temperature rather than sensor temperature).  
+CO2Pro data from the mooring at the CP focal site. Includes a range of sensor-related data, and for our purposes it has data and time fields, and  CO2. While there are two temperature fields (IRGA, and sensor), both of these are internal instrument temperatures and do not reflect ambient water temperature (IRGA is the temperature inside the infrared gas analyser, and 'Sensor' is the temperature at the humidity sensor.
+
 
 ref_sensor_august25_2025.txt  
 CO2Pro data from the mooring at the R8 reference site. Includes a range of sensor-related data, and for our purposes it has data and time fields, along with CO2 and temperature (assume we want IRGA temperature rather than sensor temperature).  
 
 *minidot folder*:  
-4 numeric folders. each folder contains a series of date-staped text files. Looks like each day's data are stored in an individual text file. Relevant data in the daily files includes time (in seconds), temperature, and DO (mg/l).
+4 numeric folders. each folder contains a series of date-stamped text files. Looks like each day's data are stored in an individual text file. Relevant data in the daily files includes time (in seconds), temperature, and DO (mg/l).
   
 *DST folder*:  
+ Four Star-Oddis were deployed in total, a primary in a cage, and a secondary without a cage. Data for each is stored
+ in a different folder. Data collected via the Star-ODDI sensor includes depth, temperature, salinity, and conductivity.
 
 -------  
 

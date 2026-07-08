@@ -1,16 +1,25 @@
 # Main setup and control script for discrete data loading
 # Script:  loading_man.R - Broughton LSSM version
 # Created: February 2024. EJG
-############################################################################----
+# Revisited June 2026. EJG
+#   Initially included only earlier BATI data. Since then has been updated to include the 
+#   2025 field field data from the Broughton work, as well as 2025 current data 
+#   and PAR (solar) data sets for driving the ODE kelp model. 
+#-------------------------------------------------------------------------------
 # This script sources the necessary libraries and functions, coordinates the
-# analysis, and creates data structures that are then 'knitted' together (I think).
-# So the idea is to run bits in here, and then 'Render' the RMD script.
-# Seems straightforward. :)
+# data loading, and creates some data structures. The data structures are exported
+# to an RData file and loaded by the main model project.
+#
+# Documentation: The RMD file is the repository for data notes. Eventually, would 
+# be nice if it created a data summary. 
 #
 ## Updates:
 # 2026/01/13: Loads discrete and mooring data, as well as necessary 2025 conditions
 #   for growth model including tidal currents and light levels. 
-#================================== Load required packages =================================
+# 2026/06/23: After a hiatus, backfilling and documenting before moving forward.
+#  Checking out temperatures, as the DST temperature last saved seems to have a 
+# step-up around day 50. 
+#========================== Load required packages ============================
 
 # check for any required packages that aren't installed and install them
 required.packages <- c( "readxl", "readr", "ggplot2", "tidyr", "dplyr", "stringr", "lubridate", "ggtext",
@@ -41,9 +50,6 @@ source( 'C:/Data/Git/LSSM_Water_Analysis/loading_functions.r')
 # Projections as EPSG codes for when we need to map the sample locations
 albers_crs <- 3005 # Or for newer datasets: albers_crs <- 3153
 UTM_crs    <- 26909 # For Zone 9N NAD83. Or for WGS84: 32609
-
-
-
 
 
 

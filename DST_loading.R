@@ -9,7 +9,7 @@
 # DST collected via the Star-ODDI sensor includes depth, temperature, salinity, and conductivity
 # Four Star-Oddis were deployed in total, a primary in a cage, and a secondary without 
 # Focal 1 = S12074, Focal 2 = S12666
-# Ref 1   = S12665; Ref 2  =  S12668 
+# Ref 1   = S12665; Ref 2   = S12668 
 
 #------ Data loading section ----
 # After trying to load xlsx files in a few ways, settled on using preprocessed, Matlab
@@ -19,44 +19,49 @@
 oddi_dir <- paste0( source_dir, '/DST' )
 
 # The individual sensor data files ... 
-ffocal1 <- '/S12074/kelp_DST_matlab_test.txt'
-ffocal2 <- '/S12666/kelp_DST_matlab.txt'
+DST_focal1 <- '/S12074/kelp_DST_matlab_test.txt'
+DST_focal2 <- '/S12666/kelp_DST_matlab.txt'
 
-fref1   <- '/S12665/ref_DST_matlab_test.txt'
+DST_ref    <- '/S12665/ref_DST_matlab_test.txt'
 #fref2   <- '/S12665/ref_DST_matlab.txt'     
 # not in the expected subdir or format. used xls files directly.
 
 clean_names <- c( "excel_date", "Temp", "Depth", "Salinity", "Conductivity", "Sound_Velocity")
 
 # Build the focal site dataframe ... 
-focal_DST1 <- read.delim( paste0(oddi_dir, ffocal1) )
-focal_DST2 <- read.delim( paste0(oddi_dir, ffocal2) )
+DST_focal1 <- read.delim( paste0(oddi_dir, DST_focal1) )
+DST_focal2 <- read.delim( paste0(oddi_dir, DST_focal2) )
 
 # tidy column names ... 
-names(focal_DST1) <- clean_names
-names(focal_DST2) <- clean_names
+names(DST_focal1) <- clean_names
+names(DST_focal2) <- clean_names
+
 # add date/time stamp
-focal_DST1$DateTime <- as.POSIXct( (focal_DST1$excel_date - 25569) * 86400,
+DST_focal1$DateTime <- as.POSIXct( (DST_focal1$excel_date - 25569) * 86400,
                                     origin = "1970-01-01", tz = "UTC" )
-focal_DST2$DateTime <- as.POSIXct( (focal_DST2$excel_date - 25569) * 86400,
+DST_focal2$DateTime <- as.POSIXct( (DST_focal2$excel_date - 25569) * 86400,
                                   origin = "1970-01-01", tz = "UTC" )
 
 # Build the reference site dataframe ... 
-ref_DST1 <- read.delim( paste0(oddi_dir, fref1) )
-ref_DST2 <- rbind( read_xls( paste0( oddi_dir, '/S12665/6S12665.xls' )),
+DST_ref1 <- read.delim( paste0(oddi_dir, DST_ref) )
+DST_ref2 <- rbind( read_xls( paste0( oddi_dir, '/S12665/6S12665.xls' )),
                    read_xls( paste0( oddi_dir, '/S12665/7S12665.xls' )),
                    read_xls( paste0( oddi_dir, '/S12665/8S12665.xls' )),
                    read_xls( paste0( oddi_dir, '/S12665/9S12665.xls' )) )
 
 # tidy column names ... 
-names(ref_DST1) <- clean_names
-names(ref_DST2) <- clean_names
+names(DST_ref1) <- clean_names
+names(DST_ref2) <- clean_names
 
 # add date/time stamp
-ref_DST1$DateTime <- as.POSIXct( (ref_DST1$excel_date - 25569) * 86400,
+DST_ref1$DateTime <- as.POSIXct( (DST_ref1$excel_date - 25569) * 86400,
                                   origin = "1970-01-01", tz = "UTC" )
-ref_DST2$DateTime <- as.POSIXct( (ref_DST2$excel_date - 25569) * 86400,
+DST_ref2$DateTime <- as.POSIXct( (DST_ref2$excel_date - 25569) * 86400,
                                  origin = "1970-01-01", tz = "UTC" )
+
+
+x <- DST_ref1
+head(x[order(x$Temp, decreasing = TRUE), ], n = 10)
 
 # Check an single data set ... 
 ggplot(x, aes(x = DateTime)) +
@@ -67,6 +72,17 @@ ggplot(x, aes(x = DateTime)) +
     title = "Temperature Over Time"
   ) +
   theme_bw()
+
+
+x <- DST_focal2
+
+head(DST_focal1)
+head(CO2_focal)
+
+
+
+
+
 
 #---- Data cleaning ---- 
 
@@ -84,10 +100,10 @@ intervals_to_posix( trim_win )
 
 
 # Trim the DST data to the above windows
-tfocal_DST1 <- trim_by_matlab_windows( focal_DST1, trim_win )
-tfocal_DST2 <- trim_by_matlab_windows( focal_DST2, trim_win )
-tref_DST1   <- trim_by_matlab_windows( ref_DST2, trim_win )
-tref_DST2   <- trim_by_matlab_windows( ref_DST2, trim_win )
+tfocal_DST1 <- trim_by_matlab_windows( DST_focal1, trim_win )
+tfocal_DST2 <- trim_by_matlab_windows( DST_focal2, trim_win )
+tref_DST1   <- trim_by_matlab_windows( DST_ref1, trim_win )
+tref_DST2   <- trim_by_matlab_windows( DST_ref2, trim_win )
 
 
 #---- Data visualization ---- 

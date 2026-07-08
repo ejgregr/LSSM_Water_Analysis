@@ -10,6 +10,43 @@
 # 
 ############################################################################
 library(ggplot2)
+library(dplyr)
+library(lubridate)
+library(stringr)
+
+#------------------------------------
+# Function to adjust the time in the ERA5 data
+shift_par_timestamps <- function(PAR_df, shift_hours, tz_in = "UTC", tz_out = "UTC") {
+  
+  # tolerant parse: handles "2025-04-01 00:00:00" and "2025-04-01 00:00:00 UTC"
+  dt <- suppressWarnings(parse_date_time(
+    as.character(PAR_df$Timestamp),
+    orders = c("Y-m-d H:M:S", "Y-m-d H:M:S z", "Ymd HMS", "Ymd HMS z"),
+    tz = tz_in
+  ))
+  
+  n_bad <- sum(is.na(dt))
+  if (n_bad > 0) {
+    bad_examples <- unique(as.character(PAR_df$Timestamp)[is.na(dt)])
+    bad_examples <- head(bad_examples, 5)
+    stop(sprintf(
+      "Timestamp parse failed for %d rows. Examples: %s",
+      n_bad, paste(bad_examples, collapse = " | ")
+    ))
+  }
+  
+  dt_shifted <- dt + hours(shift_hours)
+  
+  PAR_df %>%
+    mutate(
+      DateTime_shifted = dt_shifted,
+      Timestamp = format(with_tz(DateTime_shifted, tz_out), "%Y-%m-%d %H:%M:%S")
+    ) %>%
+    select(-DateTime_shifted)
+}
+#------------------------------------
+
+#rm( list=c('era5_df','ERA_fixed','era_fixed'))
 
 # Directory containing monthly CSVs
 csv_dir <- "GEE_exports"
@@ -27,6 +64,30 @@ era5_df <- do.call(
   })
 )
 
+# The ERA5 code has a couple issues. First, it's UTC, so the time needs to be adjusted. 
+# But before that, there is an odd thing where every 24th row has a malformed DateTime.
+
+# Step 1: Find and fix malformed dates ... 
+dt_try <- suppressWarnings(lubridate::ymd_hms(as.character(era5_df$Timestamp), tz="UTC"))
+bad <- which(is.na(dt_try))
+
+# Now replace bad rows by writing "YYYY-mm-dd 17:00:00"
+# first coerce to character as its behaving like a factor
+era5_df$Timestamp <- as.character(era5_df$Timestamp)
+
+# now pull bad dates, strip trailing " UTC" if present
+bad_dates <- sub(" UTC$", "", as.character( era5_df$Timestamp[ bad ]) )
+
+# write the expanded, correct date-time format
+era5_df$Timestamp[bad] <- paste0(bad_dates, " 00:00:00")
+
+# Step 2: Shift the time to PST, this is -7 during daylight savings in BC
+ERA_fixed <- shift_par_timestamps(era5_df, shift_hours = -7)
+
+
+#---- CONVERT DSR to PAR ----
+era5_df <- ERA_fixed
+
 # Keep only required columns
 # stdDev is across the 11 pixels selected by the Broughton mask
 era5_df <- era5_df[, c("Timestamp", "mean", "stdDev")]
@@ -41,7 +102,7 @@ par_df$mean   <- (era5_df$mean   / 3600) * 0.5 * 4.57
 par_df$stdDev <- (era5_df$stdDev / 3600) * 0.5 * 4.57
 
 # Hourly plot is messy and time-consuming to produce. Plot daily if you like
-daily_PAR_plot( par_df )
+#daily_PAR_plot( par_df )
 
 # Sum PAR to get a daily light interval .... 
 
@@ -52,88 +113,6 @@ DLI_plot( DLI_df )
 
 
 
-
-
-
-#------------------------- PAR support FUNCTIONS -----------------------------
-
-#---- Daily light interval from PAR ----
-calc_dli <- function(df) {
-  df$Date <- as.Date(df$Timestamp)
-  
-  # Sum the means per day and convert to mol/m2/d
-  # (Sum * 3600 / 1000000 = Sum * 0.0036)
-  daily_mean <- aggregate(mean ~ Date, data = df, FUN = function(x) sum(x) * 0.0036)
-  colnames(daily_mean)[2] <- "mean"
-  
-  # Propagate uncertainty: sqrt(sum(stdDev^2)) * 0.0036
-  daily_sd <- aggregate(stdDev ~ Date, data = df, FUN = function(x) sqrt(sum(x^2)) * 0.0036)
-  colnames(daily_sd)[2] <- "dli_stdDev"
-  
-  # Merge results into a single data frame
-  result <- merge(daily_mean, daily_sd, by = "Date")
-  
-  return(result)
-}
-
-#----- Plot DLI   ----
-DLI_plot <-function( dli_dat ){
-  
-  ggplot(dli_dat, aes(x = Date, y = mean)) +
-    geom_errorbar(
-      aes(
-        ymin = mean - stdDev,
-        ymax = mean + stdDev
-      ),
-      width = 0,            # vertical lines only
-      alpha = 0.5,
-      linewidth = 0.4
-    ) +
-    geom_point(
-      size = 1.2,
-      color = "black"
-    ) +
-    labs(
-      x = "Date",
-      y = expression("Daily Light Interval (mol m"^-2~" d"^-1~")"),
-      title = "Daily Light Interval (mean ± SD)"
-    ) +
-    theme_bw()
-}
-
-#----- Plot daily PAR data  ----
-daily_PAR_plot <-function( par_dat ){
-  
-  # downsample to daily ... 
-  par_daily <- aggregate(
-    cbind(mean, stdDev) ~ as.Date(Timestamp),
-    data = par_dat,
-    FUN = mean
-  )
-  
-  names(par_daily)[1] <- "Date"
-  
-  ggplot(par_daily, aes(x = Date, y = mean)) +
-    geom_errorbar(
-      aes(
-        ymin = mean - stdDev,
-        ymax = mean + stdDev
-      ),
-      width = 0,            # vertical lines only
-      alpha = 0.5,
-      linewidth = 0.4
-    ) +
-    geom_point(
-      size = 1.2,
-      color = "black"
-    ) +
-    labs(
-      x = "Date",
-      y = expression("Photosynthetically Active Radiation (umol m"^-2~" s"^-1~")"),
-      title = "Daily Photosynthetically Active Radiation (mean ± SD)"
-    ) +
-    theme_bw()
-}
-
 #----
 # FIN.
+
