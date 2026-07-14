@@ -51,6 +51,9 @@ source( 'C:/Data/Git/LSSM_Water_Analysis/loading_functions.r')
 albers_crs <- 3005 # Or for newer datasets: albers_crs <- 3153
 UTM_crs    <- 26909 # For Zone 9N NAD83. Or for WGS84: 32609
 
+# Deployment dates for trimming sensor data
+sdate <- "2025-04-25" # The day after deployment
+edate <- "2025-09-15" # The day before mooring recovery
 
 
 

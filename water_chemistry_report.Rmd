@@ -30,7 +30,7 @@ BKP_Metadata_EdModified_ver2025Aug22.xls:
 Early discrete sample data. Used to develop loading and initial plotting routines.  
   
 # Mooring setup
-This information was obtained from sources created by Wiley. The first is a mooring Instrumentation_setup.docx, and more granualar details were found in the Matlab script Broughton_moorings_plots.m, reflecting the adaptation of the sensors over the course of the season.
+This information was obtained from sources created by Wiley. The first is a mooring Instrumentation_setup.docx, and more granular details were found in the Matlab script Broughton_moorings_plots.m, reflecting the adaptation of the sensors over the course of the season.
   
 Two moorings were deployed on April 24, 2025, one at the focal site (CP) at 1741, and one at the reference site (R8) at 1906. Each mooring had a CO2Pro sensor, a Star-ODDI, and a MiniDOT. Sampling rates were 240 minutes, 3 minutes, and 1 minute respectively.  
   

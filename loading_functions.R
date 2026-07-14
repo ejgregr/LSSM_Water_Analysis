@@ -2,7 +2,9 @@
 # Created: December 2025. EJG
 ################################################################################
 # UPDATES:
-# none yet.
+# July 2026: Revising as part of data review. So far have:
+#   - new function to remove identified maintenance windows
+#   - reviewed and revised MDOT data loading
 #
 # TO DO:
 #         ** FIX THE DATA LOAD AND DATA SAVING CODE BELOW **
@@ -39,7 +41,76 @@
 #head(DST_focal1)
 #head(mdot_ref_dat)
 
+ 
+ #=============================== Common functions =============================
+  # Trim mooring data to deployment dates. Depends on global sdate and edate
+ trim_deployment <- function(df) {
+   df <- df[ (df$DateTime >= as.POSIXct(sdate, tz = "UTC") &
+              df$DateTime <= as.POSIXct(edate, tz = "UTC")), ]
+   df
+ }
 
+ # Trim mooring data with maintenance windows identified by manual examination 
+ # of the temperature data - NB: Windows DIFFER for each mooring. 
+ trim_foc_maintenance <- function(df) {
+   
+   jun12_start <- "2025-06-12 19:27:00"
+   jun12_end   <- "2025-06-12 20:40:00"
+   
+   jul10_start <- "2025-07-10 20:18:00"
+   jul10_end   <- "2025-07-11 15:00:00"
+   
+   aug25_start <- "2025-08-25 17:24:00"
+   aug25_end   <- "2025-08-25 19:14:00"
+   
+   windows <- list(
+     c(jun12_start, jun12_end),
+     c(jul10_start, jul10_end),
+     c(aug25_start, aug25_end)
+   )
+   
+   for (w in windows) {
+     df <- df[!(df$DateTime >= as.POSIXct(w[1], tz = "UTC") &
+                  df$DateTime <= as.POSIXct(w[2], tz = "UTC")), ]
+   }
+   df
+ }
+ 
+ trim_ref_maintenance <- function(df) {
+   
+   jun12_start <- "2025-06-12 21:39:00"
+   jun12_end   <- "2025-06-12 22:36:00"
+   
+   jul10_start <- "2025-07-10 17:07:00"
+   jul10_end   <- "2025-07-10 19:16:00"
+   
+   aug25_start <- "2025-08-25 19:31:00"
+   aug25_end   <- "2025-08-25 20:46:00 "
+   
+   windows <- list(
+     c(jun12_start, jun12_end),
+     c(jul10_start, jul10_end),
+     c(aug25_start, aug25_end)
+   )
+   
+   for (w in windows) {
+     df <- df[!(df$DateTime >= as.POSIXct(w[1], tz = "UTC") &
+                  df$DateTime <= as.POSIXct(w[2], tz = "UTC")), ]
+   }
+   df
+ }
+
+ # Insert an NA row in the maintenance gaps so the graphs do not interpolate
+ # FOR PLOTTING ONLY
+ insert_gap <- function(df, time) {
+   gap_row <- df[1, ]
+   gap_row[, !names(gap_row) %in% "DateTime"] <- NA
+   gap_row$DateTime <- as.POSIXct(time, tz = "UTC")
+   df <- rbind(df, gap_row)
+   df[order(df$DateTime), ]
+ }
+ 
+ 
 #==================================== CO2 Data =================================
 # This function loads and combines the 4 CO2 files from each mooring to create 
 # the full time series. There is one annoyance in that the reference site data
@@ -137,8 +208,8 @@ daily_stats <- function(df) {
   return(result)
 }
 
-#========================== MiniDot (O2 and T) Data ============================
 
+#========================== MiniDot (O2 and T) Data ============================
 # Load and combine catenated files.
 read_mdot <- function(files, cols = c("DateTime", "Temp", "DO", "DO_sat")) {
   do.call(rbind, lapply(files, function(f) {
@@ -158,20 +229,6 @@ read_txts <- function(files, cols = c("DateTime", "Temp", "DO")) {
     df$DateTime <- as.POSIXct(df$Unix_date, origin = "1970-01-01", tz = "UTC")
     df[, cols]
   }))
-}
-
-
-
-# Simple function to remove dates 
-trim_dates <- function(df) {
-  
-  df$Date <- as.Date(df$Timestamp)
-  
-  df <- df[df$Date >= start_date & df$Date <= end_date, ]
-  df <- df[! df$Date %in% service_days, ]
-  
-  df$Date <- NULL   # optional cleanup
-  df
 }
 
 plot_range <- function(df, start_date, end_date) {
@@ -199,6 +256,7 @@ plot_range <- function(df, start_date, end_date) {
     theme_bw() +
     theme(axis.text.x = element_text(angle = 45, hjust = 1))
 }
+
 
 #=========================== StarODDI (S/T) Data ===============================
 # Trim rows between one or more MATLAB-datenum intervals (inclusive)
@@ -360,6 +418,34 @@ load_currents <- function(filename, tz = "UTC") {
   df <- df[, c("Timestamp", "Date", "HourMinute", "Direction", "Speed")]
   
   return(df)
+}
+
+predict_tides <- function(tides, target_df) {
+  
+  t0 <- min(tides$DateTime)
+  tides$hours <- as.numeric(difftime(tides$DateTime, t0, units = "hours"))
+  
+  # Tidal constituent periods (hours)
+  M2 <- 12.4206
+  S2 <- 12.0000
+  K1 <- 23.9345
+  O1 <- 25.8194
+  
+  harm_fit <- lm(Metres ~ 
+                   sin(2*pi*hours/M2) + cos(2*pi*hours/M2) +
+                   sin(2*pi*hours/S2) + cos(2*pi*hours/S2) +
+                   sin(2*pi*hours/K1) + cos(2*pi*hours/K1) +
+                   sin(2*pi*hours/O1) + cos(2*pi*hours/O1),
+                 data = tides)
+  
+  # Predict at target timestamps
+  hours_out <- as.numeric(difftime(target_df$DateTime, t0, units = "hours"))
+  pred_df   <- data.frame(hours = hours_out)
+  
+  data.frame(
+    DateTime  = target_df$DateTime,
+    tide_m    = predict(harm_fit, newdata = pred_df)
+  )
 }
 
 
