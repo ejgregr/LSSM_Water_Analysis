@@ -1,10 +1,14 @@
-#### DISCRETE SAMPLE LOADING ###
-# Significant bits of this code, particularly string processing, were provided by ChatGPT. 
-# Updated: Oct 20, 2025
-############################################################################
-# NOTES:
-# none yet.
-############################################################################
+#===============================================================================
+# Script:  discrete_sample_loading.R
+# Purpose: Load and visualise DST (Star-Oddi) data provided by Wiley
+# Created: Sept 2025
+# NOTES: 
+# Significant bits of this code, esp. string processing) provided by ChatGPT. 
+#===============================================================================
+# Updates:
+# 2025/10/208: Updated for consistency 
+#
+#===============================================================================
 
 
 # Load early version of discrete sample data. Allow read_excel() to guess types. Does a good job so far. 

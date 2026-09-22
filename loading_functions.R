@@ -1,7 +1,11 @@
-# All functions to support loading and plotting
-# Created: December 2025. EJG
-################################################################################
-# UPDATES:
+#===============================================================================
+# Script:  loading_functions.R
+# Purpose: All functions to support loading and plotting
+# Created: Nov 2025
+# NOTES: Significant bits of this code, particularly string processing, were provided by ChatGPT.
+#   Sensor data include depth, temperature, salinity, and conductivity
+#===============================================================================
+# Updates:
 # July 2026: Revising as part of data review. So far have:
 #   - new function to remove identified maintenance windows
 #   - reviewed and revised MDOT data loading
@@ -9,145 +13,145 @@
 # TO DO:
 #         ** FIX THE DATA LOAD AND DATA SAVING CODE BELOW **
 # Jan28: in progress. CO2 data combed thru. May be a merge issue with the data
-# Next: 
-#   - isolate the outputs from each of the other data loading sheets. 
+# Next:
+#   - isolate the outputs from each of the other data loading sheets.
 #   - tidy up current data, esp. some methods.
-################################################################################
-
-# DST data includes Temp, Salinity, Conductivity, DateTime
-#   DST_focal1, DST_focal2, DST_ref1, DST_ref2
-
-# Minidot includes Temp, DO, DO_sat, Q
-#   mdot_focal, mdot_ref
-
-# PAR loading includes GEE export of ERA5 radiation. PAR and DLI derived.  
-#   DLI_df
-
-# Currents includes 5 min predictions of tide and direction and Weyton and Blackney passes
-#   
-# Output results from data loading ... 
-
- df_names <- c( "CO2_focal", "CO2_ref", 
-                "DST_focal1", "DST_focal2", "DST_ref1", "DST_ref2", 
-                "mdot_focal", "mdot_ref", 
-                "DLI_df", "par_df" )
-  
-# save(list = df_names, file = file.path(results_dir, "kelp_project_data.RData"))
-
-# To load in a new script:
-# load("kelp_project_data.RData")
+#===============================================================================
 
 
-#head(DST_focal1)
-#head(mdot_ref_dat)
 
- 
- #=============================== Common functions =============================
-  # Trim mooring data to deployment dates. Depends on global sdate and edate
- trim_deployment <- function(df) {
-   df <- df[ (df$DateTime >= as.POSIXct(sdate, tz = "UTC") &
-              df$DateTime <= as.POSIXct(edate, tz = "UTC")), ]
-   df
- }
-
- # Trim mooring data with maintenance windows identified by manual examination 
- # of the temperature data - NB: Windows DIFFER for each mooring. 
- trim_foc_maintenance <- function(df) {
-   
-   jun12_start <- "2025-06-12 19:27:00"
-   jun12_end   <- "2025-06-12 20:40:00"
-   
-   jul10_start <- "2025-07-10 20:18:00"
-   jul10_end   <- "2025-07-11 15:00:00"
-   
-   aug25_start <- "2025-08-25 17:24:00"
-   aug25_end   <- "2025-08-25 19:14:00"
-   
-   windows <- list(
-     c(jun12_start, jun12_end),
-     c(jul10_start, jul10_end),
-     c(aug25_start, aug25_end)
-   )
-   
-   for (w in windows) {
-     df <- df[!(df$DateTime >= as.POSIXct(w[1], tz = "UTC") &
-                  df$DateTime <= as.POSIXct(w[2], tz = "UTC")), ]
-   }
-   df
- }
- 
- trim_ref_maintenance <- function(df) {
-   
-   jun12_start <- "2025-06-12 21:39:00"
-   jun12_end   <- "2025-06-12 22:36:00"
-   
-   jul10_start <- "2025-07-10 17:07:00"
-   jul10_end   <- "2025-07-10 19:16:00"
-   
-   aug25_start <- "2025-08-25 19:31:00"
-   aug25_end   <- "2025-08-25 20:46:00 "
-   
-   windows <- list(
-     c(jun12_start, jun12_end),
-     c(jul10_start, jul10_end),
-     c(aug25_start, aug25_end)
-   )
-   
-   for (w in windows) {
-     df <- df[!(df$DateTime >= as.POSIXct(w[1], tz = "UTC") &
-                  df$DateTime <= as.POSIXct(w[2], tz = "UTC")), ]
-   }
-   df
- }
-
- # Insert an NA row in the maintenance gaps so the graphs do not interpolate
- # FOR PLOTTING ONLY
- insert_gap <- function(df, time) {
-   gap_row <- df[1, ]
-   gap_row[, !names(gap_row) %in% "DateTime"] <- NA
-   gap_row$DateTime <- as.POSIXct(time, tz = "UTC")
-   df <- rbind(df, gap_row)
-   df[order(df$DateTime), ]
- }
- 
- 
-#==================================== CO2 Data =================================
-# This function loads and combines the 4 CO2 files from each mooring to create 
-# the full time series. There is one annoyance in that the reference site data
-# has one file that is tab delimited, while the other 7 files are comma delimited. 
-# This requires the condiional, delimiter-based read in the function.  
-load_and_bind <- function(files, cols, tz = "UTC") {
-  out <- do.call(rbind, lapply(files, function(f) {
-    
-    # --- Detect delimiter from first line ---
-    first_line <- readLines(f, n = 1)
-    is_comma <- grepl(",", first_line)
-    
-    # --- Read file accordingly ---
-    if (is_comma) {
-      df <- read.csv(f, header = TRUE, check.names = FALSE, stringsAsFactors = FALSE)
-    } else {
-      df <- read.delim(f, header = TRUE, check.names = FALSE, stringsAsFactors = FALSE)
-    }
-    
-    df <- df[-1, , drop = FALSE]                    # drop the formatting row
-    df[] <- lapply(df, type.convert, as.is = TRUE)  # restore numeric types
-    df <- df[, cols, drop = FALSE]                  # keep only needed columns
-    df$Timestamp <- as.POSIXct(sprintf(
-      "%04d-%02d-%02d %02d:%02d:%02d",
-      df$Year, df$Month, df$Day, df$Hour, df$Minute, df$Second
-    ), tz = tz)
-    df
-  }))
-  rownames(out) <- NULL
-  out
+#=============================== Common functions =============================
+# Trim data set to deployment dates. Depends on global sdate and edate
+trim_deployment <- function(df) {
+  df <- df[(
+    df$DateTime >= as.POSIXct(sdate, tz = "UTC") &
+      df$DateTime <= as.POSIXct(edate, tz = "UTC")
+  ), ]
+  df
 }
 
-# Plot two comparable time series. 
+# Trim mooring data with maintenance windows identified by manual examination
+# of the temperature data - NB: Windows DIFFER for each mooring.
+trim_foc_maintenance <- function(df) {
+  jun12_start <- "2025-06-12 19:27:00"
+  jun12_end   <- "2025-06-12 20:40:00"
+  
+  jul10_start <- "2025-07-10 20:18:00"
+  jul10_end   <- "2025-07-11 15:00:00"
+  
+  #   aug25_start <- "2025-08-25 17:24:00"
+  #   aug25_end   <- "2025-08-25 19:14:00"
+  
+  windows <- list(
+    c(jun12_start, jun12_end),
+    c(jul10_start, jul10_end)#,
+    #     c(aug25_start, aug25_end)
+  )
+  
+  for (w in windows) {
+    df <- df[!(df$DateTime >= as.POSIXct(w[1], tz = "UTC") &
+                 df$DateTime <= as.POSIXct(w[2], tz = "UTC")), ]
+  }
+  df
+}
+
+trim_ref_maintenance <- function(df) {
+  jun12_start <- "2025-06-12 21:30:00"
+  jun12_end   <- "2025-06-12 22:45:00"
+  
+  jul10_start <- "2025-07-10 17:00"
+  jul10_end   <- "2025-07-10 20:00"
+  
+  #   aug25_start <- "2025-08-25 19:31:00"
+  #   aug25_end   <- "2025-08-25 20:46:00"
+  
+  windows <- list(
+    c(jun12_start, jun12_end),
+    c(jul10_start, jul10_end)#,
+    #     c(aug25_start, aug25_end)
+  )
+  
+  for (w in windows) {
+    df <- df[!(df$DateTime >= as.POSIXct(w[1], tz = "UTC") &
+                 df$DateTime <= as.POSIXct(w[2], tz = "UTC")), ]
+  }
+  df
+}
+
+# Insert an NA row in the maintenance gaps so the graphs do not interpolate
+# FOR PLOTTING ONLY
+insert_gap <- function(df, time) {
+  gap_row <- df[1, ]
+  gap_row[, !names(gap_row) %in% "DateTime"] <- NA
+  gap_row$DateTime <- as.POSIXct(time, tz = "UTC")
+  df <- rbind(df, gap_row)
+  df[order(df$DateTime), ]
+}
+
+# Plot a set of time series on their own axes
+plot_timeseries <- function(series_list,
+                            metric = "Value",
+                            colours  = c("steelblue", "darkred", "darkgreen", "purple", "darkorange")) {
+  n <- length(series_list)
+  
+  par(mfrow = c(n, 1), mar = c(2, 4, 1, 1))
+  
+  for (i in seq_along(series_list)) {
+    s <- series_list[[i]]
+    plot(
+      s$df$DateTime,
+      s$df[[s$var]],
+      type = "l",
+      col = colours[i],
+      lwd = 0.8,
+      xlab = "",
+      ylab = metric,
+      main = s$label
+    )
+  }
+  
+  mtext("Date", side = 1, line = 3)
+  par(mfrow = c(1, 1))
+}
+
+
+#==================================== CO2 Data =================================
+# Simplified load for single matlab scripts 
+load_matlab <- function(datfile, cols, tz = "") {
+  df <- read.delim(
+    datfile,
+    header = TRUE,
+    check.names = FALSE,
+    stringsAsFactors = FALSE
+  )
+  names(df) <- sub("^%", "", names(df)) # clean up Year name
+  df <- df[-1, , drop = FALSE]                    # drop the formatting row
+  df[] <- lapply(df, type.convert, as.is = TRUE)  # restore numeric types
+  df$DateTime <- as.POSIXct(
+    sprintf(
+      "%04d-%02d-%02d %02d:%02d:%02d",
+      df$Year,
+      df$Month,
+      df$Day,
+      df$Hour,
+      df$Minute,
+      df$Second
+    ),
+    tz = tz
+  )
+  print( "after date")
+  df <- df[, cols, drop = FALSE] # keep only needed columns
+  rownames(df) <- NULL
+  df
+}
+
+
+# 2026/09/22: Depreciated. Prefer to plot on separate panels. 
+# Plot two comparable time series.
 # Column to plot, y axis title, and main title are parameters
-# Required values include "Timestamp" and "Dataset"
-two_series_plot <-function( plot_dat, y_val, y_text, t_text ){
-  ggplot(plot_dat, aes(x = Timestamp, y = .data[[y_val]], color = Dataset)) +
+# Required values include "DateTime" and "Dataset"
+two_series_plot <- function(plot_dat, y_val, y_text, t_text) {
+  ggplot(plot_dat, aes(x = DateTime, y = .data[[y_val]], color = Dataset)) +
     geom_line(alpha = 0.8) +
     labs(
       x = "Time",
@@ -158,6 +162,7 @@ two_series_plot <-function( plot_dat, y_val, y_text, t_text ){
     theme_bw()
 }  
 
+# 2026/09/22: Depreciated. Prefer to plot on separate panels. 
 plot_diff <-function( plot_dat ){
   ggplot(plot_dat, aes(x = Timestamp, y = CO2_diff)) +
     geom_line(color = "black") +
@@ -313,31 +318,58 @@ intervals_to_posix <- function(df, intervals, tz = "UTC") {
 #------------------------- PAR support FUNCTIONS -----------------------------
 #---- Daily light interval from PAR ----
 calc_dli <- function(df) {
-  df$Date <- as.Date(df$Timestamp)
   
-  # Sum the means per day and convert to mol/m2/d
-  # (Sum * 3600 / 1000000 = Sum * 0.0036)
-  daily_mean <- aggregate(mean ~ Date, data = df, FUN = function(x) sum(x) * 0.0036)
-  colnames(daily_mean)[2] <- "DLI_mean"
+  # Convert SSRD (J/m2/hr) to PAR (mol photons m-2 hr-1)
+  # 0.45 = PAR energy portion of total solar radiation
+  # 4.57 = umol of photons in PAR 
+  # 1e6  = umol to mol 
+  df$PAR_mol_hr    <- df$SSRD_mean   * 0.45 * 4.57 / 1e6
+  df$PAR_var_hr    <- (df$SSRD_stdev * 0.45 * 4.57 / 1e6)^2  # variance
   
-  # Propagate uncertainty: sqrt(sum(stdDev^2)) * 0.0036
-  daily_sd <- aggregate(stdDev ~ Date, data = df, FUN = function(x) sqrt(sum(x^2)) * 0.0036)
-  colnames(daily_sd)[2] <- "DLI_stdDev"
+  # Date column for aggregation
+  df$Date <- as.Date(df$DateTime)
   
-  # Merge results into a single data frame
-  result <- merge(daily_mean, daily_sd, by = "Date")
+  # Daily DLI — sum hourly PAR and variance, then take sqrt for SD
+  DLI_mean <- aggregate(PAR_mol_hr ~ Date, data = df, FUN = sum)
+  DLI_var  <- aggregate(PAR_var_hr ~ Date, data = df, FUN = sum)
   
-  return(result)
+  data.frame(
+    DateTime = as.POSIXct(paste(DLI_mean$Date, "12:00:00"),
+                          format = "%Y-%m-%d %H:%M:%S",
+                          tz     = "America/Vancouver"),
+    DLI_mean  = DLI_mean$PAR_mol_hr,
+    DLI_sd    = sqrt(DLI_var$PAR_var_hr)
+  )
 }
+
+# older version 
+# calc_dli <- function(df) {
+#   df$Date <- as.Date(df$Timestamp)
+#   
+#   # Sum the means per day and convert to mol/m2/d
+#   # (Sum * 3600 / 1000000 = Sum * 0.0036)
+#   daily_mean <- aggregate(mean ~ Date, data = df, FUN = function(x) sum(x) * 0.0036)
+#   colnames(daily_mean)[2] <- "DLI_mean"
+#   
+#   # Propagate uncertainty: sqrt(sum(stdDev^2)) * 0.0036
+#   daily_sd <- aggregate(stdDev ~ Date, data = df, FUN = function(x) sqrt(sum(x^2)) * 0.0036)
+#   colnames(daily_sd)[2] <- "DLI_stdDev"
+#   
+#   # Merge results into a single data frame
+#   result <- merge(daily_mean, daily_sd, by = "Date")
+#   
+#   return(result)
+# }
+
 
 #----- Plot DLI   ----
 DLI_plot <-function( dli_dat ){
   
-  ggplot(dli_dat, aes(x = Date, y = DLI_mean)) +
+  ggplot(dli_dat, aes(x = DateTime, y = DLI_mean)) +
     geom_errorbar(
       aes(
-        ymin = DLI_mean - DLI_stdDev,
-        ymax = DLI_mean + DLI_stdDev
+        ymin = DLI_mean - DLI_sd,
+        ymax = DLI_mean + DLI_sd
       ),
       width = 0,            # vertical lines only
       alpha = 0.5,
@@ -350,7 +382,7 @@ DLI_plot <-function( dli_dat ){
     labs(
       x = "Date",
       y = expression("Daily Light Interval (mol m"^-2~" d"^-1~")"),
-      title = "Daily Light Interval (mean ± SD)"
+      title = "Daily Light Interval across 5 ERA5 pixels (mean ± SD)"
     ) +
     theme_bw()
 }
@@ -420,6 +452,20 @@ load_currents <- function(filename, tz = "UTC") {
   return(df)
 }
 
+# Make time matrix from existing sensor DF names. 
+make_time_grid <- function(){
+t_grid <- seq(from = min(c(mdot_foc$DateTime, DST_foc1$DateTime, DST_foc2$DateTime)),
+              to   = max(c(mdot_foc$DateTime, DST_foc1$DateTime, DST_foc2$DateTime)),
+              by   = "5 min")
+
+data.frame(
+  DateTime   = t_grid,
+  mdot_foc   = interp_temp(mdot_foc,   t_grid),
+  DST_foc1   = interp_temp(DST_foc1,   t_grid),
+  DST_foc2   = interp_temp(DST_foc2,   t_grid)  )
+}
+
+# Predict tide heights from Alert Bay data to 5 minute time intervales from sensors.
 predict_tides <- function(tides, target_df) {
   
   t0 <- min(tides$DateTime)
@@ -447,7 +493,6 @@ predict_tides <- function(tides, target_df) {
     tide_m    = predict(harm_fit, newdata = pred_df)
   )
 }
-
 
 classify_ebb_flood <- function(df,
                                flood_range = c(315, 45),
@@ -612,5 +657,5 @@ speed_by_window <- function(windows, tide) {
 }
 
 
-
+#----
 ### FIN.

@@ -1,12 +1,15 @@
-############################################################################----
-# DST (Star-Oddi) DATA LOADING and VISUALIZATION ###
-# Significant bits of this code, particularly string processing, were provided by ChatGPT. 
-# NOTES:
+#===============================================================================
+# Script:  CO2_data_loading.R
+# Purpose: Load and visualise DST (Star-Oddi) data provided by Wiley
+# Created: Nov 2025
+# NOTES: Significant bits of this code, particularly string processing, were provided by ChatGPT. 
+#   Sensor data include depth, temperature, salinity, and conductivity
+#===============================================================================
+# Updates:
 # 2026/07/08: Data loading review and cleaned up
 #             Data trimming applied consistently
-############################################################################
+#===============================================================================
 
-# DST collected via the Star-ODDI sensor includes depth, temperature, salinity, and conductivity
 # Four Star-Oddis were deployed in total, a primary in a cage, and a secondary without 
 # Focal 1 = S12074, Focal 2 = S12666
 # Ref 1   = S12665; Ref 2   = S12668 (Ref 2 added during July 10 maintenance)
@@ -70,26 +73,26 @@ DST_ref2 <-trim_ref_maintenance( DST_ref2 )
 
 
 #---- Data visualization ---- 
-
-#---- Show all data ----
-ggplot() +
-  geom_line(data = DST_foc1, aes(x = DateTime, y = Temp, color = "F1"), linewidth = 0.7) +
-  geom_line(data = DST_foc2, aes(x = DateTime, y = Temp, color = "F2"), linewidth = 0.7) +
-  geom_line(data = DST_ref1, aes(x = DateTime, y = Temp, color = "R1"), linewidth = 0.7) +
-  geom_line(data = DST_ref2, aes(x = DateTime, y = Temp, color = "R2"), linewidth = 0.7) +
-  scale_color_manual(values = c("F1" = "red",
-                                "F2" = "blue",
-                                "R1" = "black",
-                                "R2" = "green")) +
-  labs(
-    x = "Time",
-    y = "Temperature (°C)",
-    title = "Temperature Time Series",
-    color = "Sensor"
-  ) +
-  theme_bw() +
-  theme(legend.position = "bottom")
-
+# 
+# #---- Show all data ----
+# ggplot() +
+#   geom_line(data = DST_foc1, aes(x = DateTime, y = Temp, color = "F1"), linewidth = 0.7) +
+#   geom_line(data = DST_foc2, aes(x = DateTime, y = Temp, color = "F2"), linewidth = 0.7) +
+#   geom_line(data = DST_ref1, aes(x = DateTime, y = Temp, color = "R1"), linewidth = 0.7) +
+#   geom_line(data = DST_ref2, aes(x = DateTime, y = Temp, color = "R2"), linewidth = 0.7) +
+#   scale_color_manual(values = c("F1" = "red",
+#                                 "F2" = "blue",
+#                                 "R1" = "black",
+#                                 "R2" = "green")) +
+#   labs(
+#     x = "Time",
+#     y = "Temperature (°C)",
+#     title = "Temperature Time Series",
+#     color = "Sensor"
+#   ) +
+#   theme_bw() +
+#   theme(legend.position = "bottom")
+# 
 
 
 ###---> Stop here. 

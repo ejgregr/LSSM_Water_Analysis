@@ -1,13 +1,14 @@
-#### MINIDOT DATA LOADING and VISUALIZATION ###
-# Significant bits of this code, particularly string processing, were provided by ChatGPT. 
-# Updated: Oct 30, 2025
-################################################################################
-# NOTES:
-# Temperature is in C; DO is mg/l, and DO_sat is a %
-# 2026/07/07: 2nd iteration of data loading simplified to use catenated files,
-#   except see below. Fuck. 
+#===============================================================================
+# Script:  minidot_loading.R
+# Purpose: Load and visualise Minidot data (T and DO) data provided by Wiley
+# Created: Nov 2025
+# NOTES: Significant bits of this code, particularly string processing, were provided by ChatGPT. 
+#   Temperature is in C; DO is mg/l, and DO_sat is a %
+#===============================================================================
+# Updates:
+# 2026/07/07: Simplified to use catenated files, except see below. Sucks this is a bit faffy
 # 2026/07/08: Data trimming cleaned up and consistent
-################################################################################
+#===============================================================================
 
 # MiniDot includes temperature and DO
 # 4 sensor folders. 2 for each mooring, as sensors were replaced as part of July 10 site visit.
@@ -70,43 +71,33 @@ mdot_ref <- trim_deployment( mdot_ref )
 mdot_foc <- trim_foc_maintenance( mdot_foc )
 mdot_ref <- trim_ref_maintenance( mdot_ref )
 
+
 #---- Show data for selected date range ---- 
 
-# optionally can trim to test dates
-#sdate <- "2025-08-25 15:00:00"
-#edate <- "2025-08-265 00:00:00"
-#foc <- trim_deployment( mdot_foc )
-#ref <- trim_deployment( mdot_ref )
-
-foc <- mdot_foc
-ref <- mdot_ref
-
-# Plot raw temperature data from both sensors 
-
-# Insert gap rows to avoid graphs connecting points on opposite sides of the gaps
-# JUly 10 maintenance
-foc <- insert_gap( foc, "2025-07-10 23:00:00" )
-ref <- insert_gap( ref, "2025-07-10 18:00:00" )
-# Aug 25 maintenance
-foc <- insert_gap( foc, "2025-08-25 18:00:00" )
-ref <- insert_gap( ref, "2025-08-25 20:00:00" )
-
-
-# Set a common temperature range
-ylim_range <- range(c(foc$Temp, ref$Temp), na.rm = TRUE)
-
-plot(foc$Temp ~ foc$DateTime,
-     type = "l", xlab = "DateTime", ylab = "Temperature", col = "steelblue",
-     ylim = ylim_range, main = "MiniDOT Temperatures")
-par(new = TRUE)
-plot(ref$Temp ~ ref$DateTime,
-     type = "l", xlab = "", ylab = "", axes = FALSE, col = "darkorange", 
-     ylim = ylim_range )
-legend("topleft",
-       legend = c("Focal", "Reference"),
-       col    = c("steelblue", "darkorange"),
-       lty    = 1, bty = "n")
-
+# # Insert gap rows to avoid graphs connecting points on opposite sides of maintenance gaps
+# # JUly 10 maintenance
+# foc <- insert_gap( foc, "2025-07-10 23:00:00" )
+# ref <- insert_gap( ref, "2025-07-10 18:00:00" )
+# # Aug 25 maintenance
+# foc <- insert_gap( foc, "2025-08-25 18:00:00" )
+# ref <- insert_gap( ref, "2025-08-25 20:00:00" )
+# 
+# 
+# # Set a common temperature range
+# ylim_range <- range(c(foc$Temp, ref$Temp), na.rm = TRUE)
+# 
+# plot(foc$Temp ~ foc$DateTime,
+#      type = "l", xlab = "DateTime", ylab = "Temperature", col = "steelblue",
+#      ylim = ylim_range, main = "MiniDOT Temperatures")
+# par(new = TRUE)
+# plot(ref$Temp ~ ref$DateTime,
+#      type = "l", xlab = "", ylab = "", axes = FALSE, col = "darkorange", 
+#      ylim = ylim_range )
+# legend("topleft",
+#        legend = c("Focal", "Reference"),
+#        col    = c("steelblue", "darkorange"),
+#        lty    = 1, bty = "n")
+# 
 
 # Fin.
 
