@@ -45,13 +45,13 @@ names(DST_ref2) <- clean_names
 
 # add date/time stamps
 DST_foc1$DateTime <- as.POSIXct( (DST_foc1$excel_date - 25569) * 86400,
-                                    origin = "1970-01-01", tz = "UTC" )
+                                    origin = "1970-01-01", tz = "America/Vancouver" )
 DST_foc2$DateTime <- as.POSIXct( (DST_foc2$excel_date - 25569) * 86400,
-                                  origin = "1970-01-01", tz = "UTC" )
+                                  origin = "1970-01-01", tz = "America/Vancouver" )
 DST_ref1$DateTime <- as.POSIXct( (DST_ref1$excel_date - 25569) * 86400,
-                                   origin = "1970-01-01", tz = "UTC" )
+                                   origin = "1970-01-01", tz = "America/Vancouver" )
 DST_ref2$DateTime <- as.POSIXct( (DST_ref2$excel_date - 25569) * 86400,
-                                   origin = "1970-01-01", tz = "UTC" )
+                                   origin = "1970-01-01", tz = "America/Vancouver" )
 
 # Check date ranges
 range(DST_foc1$DateTime)
@@ -70,6 +70,10 @@ DST_foc1 <-trim_foc_maintenance( DST_foc1 )
 DST_foc2 <-trim_foc_maintenance( DST_foc2 )
 DST_ref1 <-trim_ref_maintenance( DST_ref1 )
 DST_ref2 <-trim_ref_maintenance( DST_ref2 )
+
+# Trim DST focal 1 sensor for failure of depth and salinity sensors
+
+DST_foc2 <- DST_foc2[ DST_foc2$DateTime < as.POSIXct( "2025-08-25 00:00:00", tz = "America/Vancouver"), ]
 
 
 #---- Data visualization ---- 

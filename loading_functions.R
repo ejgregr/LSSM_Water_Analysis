@@ -18,62 +18,71 @@
 #   - tidy up current data, esp. some methods.
 #===============================================================================
 
-
-
 #=============================== Common functions =============================
 # Trim data set to deployment dates. Depends on global sdate and edate
 trim_deployment <- function(df) {
+  
+  # The Deployment window first ... 
   df <- df[(
-    df$DateTime >= as.POSIXct(sdate, tz = "UTC") &
-      df$DateTime <= as.POSIXct(edate, tz = "UTC")
+    df$DateTime >= as.POSIXct(sdate, tz = "America/Vancouver") &
+    df$DateTime <= as.POSIXct(edate, tz = "America/Vancouver")
   ), ]
+
   df
 }
 
-# Trim mooring data with maintenance windows identified by manual examination
+# Trim mooring data with JUNE and JLUY maintenance windows identified by manual examination
 # of the temperature data - NB: Windows DIFFER for each mooring.
 trim_foc_maintenance <- function(df) {
-  jun12_start <- "2025-06-12 19:27:00"
-  jun12_end   <- "2025-06-12 20:40:00"
   
-  jul10_start <- "2025-07-10 20:18:00"
-  jul10_end   <- "2025-07-11 15:00:00"
+  # Times from DST focal data:
+#  jun12_start <- "2025-06-12 12:30:00"
+#  jun12_end   <- "2025-06-12 13:30:00"
+  # expanded to include DST Salinity anomaly. Bubble in sensor?
+  jun12_start <- "2025-06-12 12:00:00"
+  jun12_end   <- "2025-06-12 14:00:00"
   
-  #   aug25_start <- "2025-08-25 17:24:00"
-  #   aug25_end   <- "2025-08-25 19:14:00"
+  
+  jul10_start <- "2025-07-10 13:00:00"
+  jul10_end   <- "2025-07-10 14:15:00"
+
+  aug25_start <- "2025-08-25 10:15:00"
+  aug25_end   <- "2025-08-25 13:00:00"
   
   windows <- list(
     c(jun12_start, jun12_end),
-    c(jul10_start, jul10_end)#,
-    #     c(aug25_start, aug25_end)
-  )
+    c(jul10_start, jul10_end),
+    c(aug25_start, aug25_end)
+ )
   
   for (w in windows) {
-    df <- df[!(df$DateTime >= as.POSIXct(w[1], tz = "UTC") &
-                 df$DateTime <= as.POSIXct(w[2], tz = "UTC")), ]
+    df <- df[!(df$DateTime >= as.POSIXct(w[1], tz = "America/Vancouver") &
+               df$DateTime <= as.POSIXct(w[2], tz = "America/Vancouver")), ]
   }
   df
 }
 
 trim_ref_maintenance <- function(df) {
-  jun12_start <- "2025-06-12 21:30:00"
-  jun12_end   <- "2025-06-12 22:45:00"
   
-  jul10_start <- "2025-07-10 17:00"
-  jul10_end   <- "2025-07-10 20:00"
+  jun12_start <- "2025-06-12 10:00:00"  # This captures a salinity anomaly earlier in the day
+  #jun12_start <- "2025-06-12 14:00:00"
+  jun12_end   <- "2025-06-12 16:30:00"
+
+  jul10_start <- "2025-07-10 10:00:00" 
+  jul10_end   <- "2025-07-10 13:00:00"
   
-  #   aug25_start <- "2025-08-25 19:31:00"
-  #   aug25_end   <- "2025-08-25 20:46:00"
-  
+  aug25_start <- "2025-08-25 12:30:00"
+  aug25_end   <- "2025-08-25 14:00:00"
+
   windows <- list(
     c(jun12_start, jun12_end),
-    c(jul10_start, jul10_end)#,
-    #     c(aug25_start, aug25_end)
+    c(jul10_start, jul10_end),
+    c(aug25_start, aug25_end)
   )
   
   for (w in windows) {
-    df <- df[!(df$DateTime >= as.POSIXct(w[1], tz = "UTC") &
-                 df$DateTime <= as.POSIXct(w[2], tz = "UTC")), ]
+    df <- df[!(df$DateTime >= as.POSIXct(w[1], tz = "America/Vancouver") &
+               df$DateTime <= as.POSIXct(w[2], tz = "America/Vancouver")), ]
   }
   df
 }
@@ -83,7 +92,7 @@ trim_ref_maintenance <- function(df) {
 insert_gap <- function(df, time) {
   gap_row <- df[1, ]
   gap_row[, !names(gap_row) %in% "DateTime"] <- NA
-  gap_row$DateTime <- as.POSIXct(time, tz = "UTC")
+  gap_row$DateTime <- as.POSIXct(time, tz = "America/Vancouver")
   df <- rbind(df, gap_row)
   df[order(df$DateTime), ]
 }
@@ -116,8 +125,8 @@ plot_timeseries <- function(series_list,
 
 
 #==================================== CO2 Data =================================
-# Simplified load for single matlab scripts 
-load_matlab <- function(datfile, cols, tz = "") {
+# Simplified load for CO2Pro single matlab scripts 
+load_matlab <- function(datfile, cols, tz = "America/Vancouver") {
   df <- read.delim(
     datfile,
     header = TRUE,
@@ -139,7 +148,6 @@ load_matlab <- function(datfile, cols, tz = "") {
     ),
     tz = tz
   )
-  print( "after date")
   df <- df[, cols, drop = FALSE] # keep only needed columns
   rownames(df) <- NULL
   df
@@ -150,17 +158,20 @@ load_matlab <- function(datfile, cols, tz = "") {
 # Plot two comparable time series.
 # Column to plot, y axis title, and main title are parameters
 # Required values include "DateTime" and "Dataset"
-two_series_plot <- function(plot_dat, y_val, y_text, t_text) {
+
+two_series_plot <- function(plot_dat, y_val, y_text, t_text, sdate = NULL, edate = NULL) {
+  
+  if (!is.null(sdate) & !is.null(edate)) {
+    plot_dat <- plot_dat[plot_dat$DateTime >= as.POSIXct(sdate, tz = "America/Vancouver") &
+                         plot_dat$DateTime <= as.POSIXct(edate, tz = "America/Vancouver"), ]
+  }
+  
   ggplot(plot_dat, aes(x = DateTime, y = .data[[y_val]], color = Dataset)) +
     geom_line(alpha = 0.8) +
-    labs(
-      x = "Time",
-      y = y_text,
-      color = "Dataset",
-      title = t_text
-    ) +
+    labs(x = "Time", y = y_text, color = "Dataset", title = t_text) +
     theme_bw()
-}  
+}
+
 
 # 2026/09/22: Depreciated. Prefer to plot on separate panels. 
 plot_diff <-function( plot_dat ){
@@ -176,6 +187,7 @@ plot_diff <-function( plot_dat ){
 }
 
 # Reduces temporal resolution to hourly, and computes mean and sd by hour
+# 2026/09/23: NOTE: SD likely meaningless as CO2 collects triplicates every hour.
 hourly_stats <- function(df) {
   # Ensure Timestamp is POSIXct
   df$Timestamp <- as.POSIXct(df$Timestamp)
@@ -215,13 +227,15 @@ daily_stats <- function(df) {
 
 
 #========================== MiniDot (O2 and T) Data ============================
-# Load and combine catenated files.
-read_mdot <- function(files, cols = c("DateTime", "Temp", "DO", "DO_sat")) {
+# Load and combine concatenated files.
+# 09/25: UPDATED read_mdot to process Unix date for consistency. Fuck. :\
+read_mdot <- function(files, cols = c("DateTime", "Temp", "DO")) {
   do.call(rbind, lapply(files, function(f) {
     df <- read.csv(f, skip = 9, header = FALSE)
     names(df) <- c("Unix_date", "DateTime", "DateTime_UTC",
                    "Battery", "Temp", "DO", "DO_sat", "Q")
-    df$DateTime <- as.POSIXct(df$DateTime, format = "%Y-%m-%d %H:%M:%S", tz = "UTC")
+#    df$DateTime <- as.POSIXct(df$DateTime, format = "%Y-%m-%d %H:%M:%S", tz = "America/Vancouver")
+    df$DateTime <- as.POSIXct(df$Unix_date, origin = "1970-01-01", tz = "America/Vancouver")
     df[, cols]
   }))
 }
@@ -231,87 +245,9 @@ read_txts <- function(files, cols = c("DateTime", "Temp", "DO")) {
   do.call(rbind, lapply(files, function(f) {
     df <- read.csv(f, skip = 3, header = FALSE)
     names(df) <- c("Unix_date", "Battery", "Temp", "DO", "Q")
-    df$DateTime <- as.POSIXct(df$Unix_date, origin = "1970-01-01", tz = "UTC")
+    df$DateTime <- as.POSIXct(df$Unix_date, origin = "1970-01-01", tz = "America/Vancouver")
     df[, cols]
   }))
-}
-
-plot_range <- function(df, start_date, end_date) {
-  
-  # Convert date inputs to Date objects (safe even if passed as Date already)
-  start_date <- as.Date(start_date)
-  end_date   <- as.Date(end_date)
-  
-  # Filter by date range
-  df$Date <- as.Date(df$Timestamp)
-  df_sub  <- df[df$Date >= start_date & df$Date <= end_date, ]
-  
-  # Plot
-  library(ggplot2)
-  ggplot(df_sub, aes(x = Timestamp)) +
-    geom_line(aes(y = Temp_ref,   color = "Reference"), linewidth = 0.8) +
-    geom_line(aes(y = Temp_focal, color = "Focal"),     linewidth = 0.8) +
-    labs(
-      x = "Time",
-      y = "Temperature (°C)",
-      color = "Sensor",
-      title = paste0("Temperature Comparison: ", start_date, " to ", end_date)
-    ) +
-    scale_color_manual(values = c("Reference" = "blue", "Focal" = "red")) +
-    theme_bw() +
-    theme(axis.text.x = element_text(angle = 45, hjust = 1))
-}
-
-
-#=========================== StarODDI (S/T) Data ===============================
-# Trim rows between one or more MATLAB-datenum intervals (inclusive)
-# df must have a POSIXct column named DateTime
-trim_by_matlab_windows <- function(df, intervals, tz = "UTC") {
-  stopifnot("DateTime" %in% names(df))
-  # ensure POSIXct and consistent tz
-  df$DateTime <- as.POSIXct(df$DateTime, tz = tz)
-  
-  # helper: MATLAB datenum -> POSIXct
-  m2t <- function(x) as.POSIXct((x - 719529) * 86400,
-                                origin = "1970-01-01", tz = tz)
-  
-  # data bounds
-  tmin <- min(df$DateTime, na.rm = TRUE)
-  tmax <- max(df$DateTime, na.rm = TRUE)
-  
-  # expect a data.frame with columns 'start' and 'end' (numeric MATLAB datenums, 0 allowed)
-  keep <- rep(TRUE, nrow(df))
-  for (i in seq_len(nrow(intervals))) {
-    s_raw <- intervals$start[i]
-    e_raw <- intervals$end[i]
-    s <- if (s_raw == 0) tmin else m2t(s_raw)
-    e <- if (e_raw == 0) tmax else m2t(e_raw)
-    keep <- keep & !(df$DateTime >= s & df$DateTime <= e)
-  }
-  df[keep, , drop = FALSE]
-}
-
-# This displays the intervals defined using MatLab time intervals to readable Posix
-intervals_to_posix <- function(df, intervals, tz = "UTC") {
-  stopifnot("DateTime" %in% names(df))
-  
-  # Ensure DateTime is POSIXct
-  df$DateTime <- as.POSIXct(df$DateTime, tz = tz)
-  
-  # Helper to convert MATLAB datenum to POSIXct
-  m2t <- function(x) as.POSIXct((x - 719529) * 86400,
-                                origin = "1970-01-01", tz = tz)
-  
-  # Bounds of actual data
-  tmin <- min(df$DateTime, na.rm = TRUE)
-  tmax <- max(df$DateTime, na.rm = TRUE)
-  
-  # Convert the intervals
-  out <- intervals
-  out$start_posix <- ifelse(out$start == 0, tmin, m2t(out$start))
-  out$end_posix   <- ifelse(out$end   == 0, tmax, m2t(out$end))
-  
-  out
 }
 
 
@@ -452,17 +388,32 @@ load_currents <- function(filename, tz = "UTC") {
   return(df)
 }
 
-# Make time matrix from existing sensor DF names. 
-make_time_grid <- function(){
-t_grid <- seq(from = min(c(mdot_foc$DateTime, DST_foc1$DateTime, DST_foc2$DateTime)),
-              to   = max(c(mdot_foc$DateTime, DST_foc1$DateTime, DST_foc2$DateTime)),
-              by   = "5 min")
+# Make time matrix from an existing sensor DF name, or from specified start/end dates. 
+make_time_grid <- function(sensor_df, sdate = NULL, edate = NULL) {
+  
+  t_min <- min(sensor_df$DateTime, na.rm = TRUE)
+  t_max <- max(sensor_df$DateTime, na.rm = TRUE)
+  
+  if (!is.null(sdate)) t_min <- as.POSIXct(sdate, tz = "America/Vancouver")
+  if (!is.null(edate)) t_max <- as.POSIXct(edate, tz = "America/Vancouver")
+  
+  t_grid <- seq(from = t_min, to = t_max, by = "5 min")
+  
+  data.frame(
+    DateTime = t_grid,
+    mdot_foc = interp_temp(mdot_foc, t_grid),
+    DST_foc1 = interp_temp(DST_foc1, t_grid),
+    DST_foc2 = interp_temp(DST_foc2, t_grid)
+  )
+}
 
-data.frame(
-  DateTime   = t_grid,
-  mdot_foc   = interp_temp(mdot_foc,   t_grid),
-  DST_foc1   = interp_temp(DST_foc1,   t_grid),
-  DST_foc2   = interp_temp(DST_foc2,   t_grid)  )
+# Pass the longest sensor df to match the deviations time grid
+temp_mat        <- make_time_grid(mdot_foc)
+tides_mdot_5min <- predict_tides(tides, temp_mat)
+tdevs           <- cbind(tides_mdot_5min, deviations)
+
+interp_temp <- function(df, t_grid) {
+  approx(df$DateTime, df$Temp, xout = t_grid, method = "linear")$y
 }
 
 # Predict tide heights from Alert Bay data to 5 minute time intervales from sensors.
@@ -494,6 +445,7 @@ predict_tides <- function(tides, target_df) {
   )
 }
 
+# Functions for defining flow direction and windows
 classify_ebb_flood <- function(df,
                                flood_range = c(315, 45),
                                ebb_range   = c(135, 225)) {

@@ -39,7 +39,7 @@ difftime( CO2_ref[1,]$DateTime, CO2_ref[ dim(CO2_ref)[[1]], ]$DateTime )
 #---- Tidy up the data ----
 # Reference sensor valve (or something) was found too tight on July visit. 
 # No data prior to that.
-CO2_ref <- CO2_ref[ CO2_ref$DateTime > as.POSIXct("2025-07-11", tz = ""), ]
+CO2_ref <- CO2_ref[ CO2_ref$DateTime > as.POSIXct("2025-07-11", tz = "America/Vancouver"), ]
 
 # Removed manually identified maintenance periods
 CO2_foc <- trim_foc_maintenance( CO2_foc )
