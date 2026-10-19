@@ -35,7 +35,9 @@ names( era5_df ) <- c( "DateTime", "SSRD_mean", "SSRD_stdev")
 head(era5_df)
 tail(era5_df)
 
-DLI_df <- calc_dli( era5_df )
+PAR_df <- calc_par( era5_df )
+DLI_df <- calc_dli( PAR_df )
+
 head(DLI_df)
 DLI_plot( DLI_df )
 

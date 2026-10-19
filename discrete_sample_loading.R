@@ -18,7 +18,7 @@
 raw_data <- read_excel( paste0( source_dir, '/Discrete_sample_data/discrete_data_for_model_development.xls' ))
 
 # see raw data column names 
-names( raw_data)
+names( raw_data )
 
 # Pull and simplify names of a relevant subset of data
 clean_data <- raw_data[, c("Station_ID", "Collection_Date", "Collection_Time_PST",
@@ -54,7 +54,7 @@ clean_data$Temp <- as.numeric( clean_data$Temp )
 disc_data <- as.data.frame(clean_data)
 rm( clean_data )
 # Check dataframe
-head(clean_data)
+head(disc_data)
 
 
 

@@ -114,8 +114,10 @@ plot_timeseries( x, metric = "partial CO2 (uatm)")
 
 
 source( 'C:/Data/Git/LSSM_Water_Analysis/PAR_loading.R')
-# DF: DLI
-# DFs include: 
+# DF: PAR, DLI
+str( PAR_df )
+PAR_df <- trim_deployment( PAR_df )
+
 str( DLI_df )
 DLI_df <- trim_deployment( DLI_df )
 DLI_plot( DLI_df)
@@ -129,15 +131,14 @@ str( disc_data )
 df_names <- c( "CO2_foc", "CO2_ref", 
                "DST_foc1", "DST_foc2", "DST_ref1", "DST_ref2", 
                "mdot_foc", "mdot_ref", 
-               "DLI_df", "disc_data" )
+               "DLI_df", "PAR_df", "disc_data" )
 
-save(list = df_names, file = file.path(results_dir, "/kelp_project_data_2026_10_16.RData"))
+save(list = df_names, file = file.path(results_dir, "/kelp_project_data_2026_10_19.RData"))
 
 # To load in a new script:
 # load("kelp_project_data.RData")
 
-file.info(file.path(results_dir, "/kelp_project_data_2026_10_16.RData"))$mtime
-
+file.info(file.path(results_dir, "/kelp_project_data_2026_10_19.RData"))$mtime
 
 
 #head(DST_focal1)

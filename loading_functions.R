@@ -252,50 +252,64 @@ read_txts <- function(files, cols = c("DateTime", "Temp", "DO")) {
 
 
 #------------------------- PAR support FUNCTIONS -----------------------------
-#---- Daily light interval from PAR ----
-calc_dli <- function(df) {
-  
+
+#---- Convert SSRD from ERA5 sensor to hourly PAR ----
+calc_par <- function(df) {
   # Convert SSRD (J/m2/hr) to PAR (mol photons m-2 hr-1)
   # 0.45 = PAR energy portion of total solar radiation
-  # 4.57 = umol of photons in PAR 
-  # 1e6  = umol to mol 
-  df$PAR_mol_hr    <- df$SSRD_mean   * 0.45 * 4.57 / 1e6
-  df$PAR_var_hr    <- (df$SSRD_stdev * 0.45 * 4.57 / 1e6)^2  # variance
+  # 4.57 = umol of photons per joule of PAR
+  # 1e6  = umol to mol
+  data.frame(
+    DateTime    = df$DateTime,
+    PAR_mol_hr  = df$SSRD_mean  * 0.45 * 4.57 / 1e6,
+    PAR_var_hr  = (df$SSRD_stdev * 0.45 * 4.57 / 1e6)^2
+  )
+}
+
+#---- Daily light interval from PAR ----
+calc_dli <- function(par_df) {
   
-  # Date column for aggregation
-  df$Date <- as.Date(df$DateTime)
+  par_df$Date <- as.Date(par_df$DateTime)
   
-  # Daily DLI — sum hourly PAR and variance, then take sqrt for SD
-  DLI_mean <- aggregate(PAR_mol_hr ~ Date, data = df, FUN = sum)
-  DLI_var  <- aggregate(PAR_var_hr ~ Date, data = df, FUN = sum)
+  DLI_mean <- aggregate(PAR_mol_hr ~ Date, data = par_df, FUN = sum)
+  DLI_var  <- aggregate(PAR_var_hr ~ Date, data = par_df, FUN = sum)
   
   data.frame(
     DateTime = as.POSIXct(paste(DLI_mean$Date, "12:00:00"),
                           format = "%Y-%m-%d %H:%M:%S",
                           tz     = "America/Vancouver"),
-    DLI_mean  = DLI_mean$PAR_mol_hr,
-    DLI_sd    = sqrt(DLI_var$PAR_var_hr)
+    DLI_mean = DLI_mean$PAR_mol_hr,
+    DLI_sd   = sqrt(DLI_var$PAR_var_hr)
   )
 }
 
-# older version 
+
+#---- Daily light interval from PAR ----
 # calc_dli <- function(df) {
-#   df$Date <- as.Date(df$Timestamp)
 #   
-#   # Sum the means per day and convert to mol/m2/d
-#   # (Sum * 3600 / 1000000 = Sum * 0.0036)
-#   daily_mean <- aggregate(mean ~ Date, data = df, FUN = function(x) sum(x) * 0.0036)
-#   colnames(daily_mean)[2] <- "DLI_mean"
+#   # Convert SSRD (J/m2/hr) to PAR (mol photons m-2 hr-1)
+#   # 0.45 = PAR energy portion of total solar radiation
+#   # 4.57 = umol of photons in PAR 
+#   # 1e6  = umol to mol 
+#   df$PAR_mol_hr    <- df$SSRD_mean   * 0.45 * 4.57 / 1e6
+#   df$PAR_var_hr    <- (df$SSRD_stdev * 0.45 * 4.57 / 1e6)^2  # variance
 #   
-#   # Propagate uncertainty: sqrt(sum(stdDev^2)) * 0.0036
-#   daily_sd <- aggregate(stdDev ~ Date, data = df, FUN = function(x) sqrt(sum(x^2)) * 0.0036)
-#   colnames(daily_sd)[2] <- "DLI_stdDev"
+#   # Date column for aggregation
+#   df$Date <- as.Date(df$DateTime)
 #   
-#   # Merge results into a single data frame
-#   result <- merge(daily_mean, daily_sd, by = "Date")
+#   # Daily DLI — sum hourly PAR and variance, then take sqrt for SD
+#   DLI_mean <- aggregate(PAR_mol_hr ~ Date, data = df, FUN = sum)
+#   DLI_var  <- aggregate(PAR_var_hr ~ Date, data = df, FUN = sum)
 #   
-#   return(result)
+#   data.frame(
+#     DateTime = as.POSIXct(paste(DLI_mean$Date, "12:00:00"),
+#                           format = "%Y-%m-%d %H:%M:%S",
+#                           tz     = "America/Vancouver"),
+#     DLI_mean  = DLI_mean$PAR_mol_hr,
+#     DLI_sd    = sqrt(DLI_var$PAR_var_hr)
+#   )
 # }
+
 
 
 #----- Plot DLI   ----
