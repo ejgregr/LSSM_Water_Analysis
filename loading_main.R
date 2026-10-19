@@ -108,8 +108,8 @@ source( 'C:/Data/Git/LSSM_Water_Analysis/CO2_data_loading.R')
 # DFs: CO2_foc, CO2_ref
 # Vars: pCO2 
 x <- list(
-  list(df = CO2_foc,  var = "CO2", label = "CO2Pro Focal"),
-  list(df = CO2_ref,  var = "CO2", label = "CO2Pro Reference") )
+  list(df = CO2_foc,  var = "pCO2", label = "CO2Pro Focal"),
+  list(df = CO2_ref,  var = "pCO2", label = "CO2Pro Reference") )
 plot_timeseries( x, metric = "partial CO2 (uatm)")
 
 
@@ -122,25 +122,22 @@ DLI_plot( DLI_df)
 
 source( 'C:/Data/Git/LSSM_Water_Analysis/discrete_sample_loading.R')
 # DF: clean_data
-head( clean_data )
+str( disc_data )
 
-
-# PAR loading includes GEE export of ERA5 radiation. PAR and DLI derived.  
-#   DLI_df
-
-# Currents includes 5 min predictions of tide and direction and Weyton and Blackney passes
-#   
 # Output results from data loading ... 
 
-df_names <- c( "CO2_focal", "CO2_ref", 
-               "DST_focal1", "DST_focal2", "DST_ref1", "DST_ref2", 
-               "mdot_focal", "mdot_ref", 
-               "DLI_df", "par_df" )
+df_names <- c( "CO2_foc", "CO2_ref", 
+               "DST_foc1", "DST_foc2", "DST_ref1", "DST_ref2", 
+               "mdot_foc", "mdot_ref", 
+               "DLI_df", "disc_data" )
 
-# save(list = df_names, file = file.path(results_dir, "kelp_project_data.RData"))
+save(list = df_names, file = file.path(results_dir, "/kelp_project_data_2026_10_16.RData"))
 
 # To load in a new script:
 # load("kelp_project_data.RData")
+
+file.info(file.path(results_dir, "/kelp_project_data_2026_10_16.RData"))$mtime
+
 
 
 #head(DST_focal1)

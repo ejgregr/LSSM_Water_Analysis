@@ -308,7 +308,7 @@ cor( daily_ref$t_range[idx], plot_tides$t_range[idx], use = "complete.obs")
 
 
 
-#------ Part 4 Coherence across Salinity  --------------------
+#------ Part 4 Coherence across Sensors --------------------
 # A function for pair-wise comparisons 
 compare_sensors <- function(df1, df2, var, 
                             lab1 = "Sensor 1", lab2 = "Sensor 2", pcolor="blue") {
@@ -340,8 +340,11 @@ compare_sensors(DST_ref1, DST_ref2, "Salinity", "DST Ref 1", "DST Ref 2", "darkg
 compare_sensors(DST_foc1, DST_foc2, "Salinity", "DST Focal 1", "DST Focal 2")
 par(mfrow = c(1, 1))
 
-# Question: does salinity variance show the same spring-neap signal as temp?
-# If so, more evidence for tidal mixing interpretation. Value? 
+#--- Temperature
+par(mfrow = c(2, 1))
+compare_sensors(DST_ref1, DST_ref2, "Temp", "DST Ref 1", "DST Ref 2", "darkgreen")
+compare_sensors(DST_foc1, DST_foc2, "Temp", "DST Focal 1", "DST Focal 2")
+par(mfrow = c(1, 1))
 
 
 #------ Part 5 Periodicity in Temperature deviation ------------------------
@@ -426,8 +429,11 @@ mean( mdot_foc$Temp )
 
 
 
+
 #------ Part 6 - Agreement across between sensors & discrete samples ----
 # Helper function to calc bias and make a plot
+# var is one of: Temp, Salt, pCO2
+# interpolates var time onto discrete time
 compare_discrete <- function(discrete_df, sensor_df, var,
                              lab_discrete = "Discrete", lab_sensor = "Sensor") {
   
@@ -454,8 +460,10 @@ compare_discrete <- function(discrete_df, sensor_df, var,
   abline(0, 1, lty = 2)
 }
 
-# Prepare the discrete data ... 
-x <- clean_data[ clean_data$Station %in% c("CP_In", "Focal", "R3"),]
+# Prepare the discrete data (created by discrete_sample_loading.r)  
+# NOTES: There is 1 CP sampled named "Focal" in the source spreadsheet
+#        R3 is the 'In' sample at the reference site. 
+x <- disc_data[ disc_data$Station %in% c("CP_In", "Focal", "R3"),]
 x <- x[ order( x$Station ), ]
 x[ x$Station == "R3", ]$Station <- "Ref"
 x[ x$Station != "Ref", ]$Station <- "Foc"
@@ -463,21 +471,35 @@ x[ x$Station != "Ref", ]$Station <- "Foc"
 foc_discrete <- x[x$Station == "Foc", ]
 ref_discrete <- x[x$Station == "Ref", ]
 
-# --- Part 2a: Temperature. NOTE that between miniDot and StarODDI, the temperature
-# coherence analysis showed the MDOT had the least deviance from the overall mean,
-# so focus on that here.
+str(x)
+
+# --- Plot a series of bias plots and print the biases to the console 
+# Use StarODDI so can check salinity as well. 
+
+par(mfrow = c(1, 2),mar = c(5, 4, 4, 2))
 
 # Discrete temp vs. MDOT 
-par(mfrow = c(1, 2))
-compare_discrete(foc_discrete, mdot_foc, "Temp", "FOC", "Mooring")
-compare_discrete(ref_discrete, mdot_ref, "Temp", "REF", "Mooring")
-par(mfrow = c(1, 1))
-
-# DONE. There is a BIAS at both sites, with surface temps warmer. 
+compare_discrete(foc_discrete, DST_foc1, "Temp", "Focal", "Mooring")
+compare_discrete(ref_discrete, DST_ref1, "Temp", "Reference", "Mooring")
+# Shows a BIAS at both sites, with surface temps warmer. 
 # 0.77 at the focal site and 0.56 at the reference site. 
+
+compare_discrete(foc_discrete, DST_foc1, "Salinity", "Focal", "Mooring")
+compare_discrete(ref_discrete, DST_ref1, "Salinity", "Reference", "Mooring")
+
+# Discrete pH vs. CO2Pro
+# Here need to remove REF discrete prior to July 11 ... 
+compare_discrete(foc_discrete, CO2_foc, "pCO2", "Focal", "Mooring")
+compare_discrete(ref_discrete, CO2_ref, "pCO2", "Reference", "Mooring")
+par(mfrow = c(1, 1))
 
 
 #---- Part 2c - Check effect of depth on temperature bias. 
+
+compare_sensors( DST_ref1, DST_ref2, "Temperature", "Ref1", "Ref2" )
+
+
+
 
 # BOX PLOT of DEPTHS
 # Combine DST depth data with sensor labels
@@ -495,6 +517,47 @@ boxplot(Depth ~ Sensor, data = depth_df,
 abline(h = 0, lty = 2)
 
 
+# Interpolate DST_ref2 onto DST_ref1 timestamps
+ref2_interp <- approx(x      = DST_ref2$DateTime,
+                      y      = DST_ref2$Temp,
+                      xout   = DST_ref1$DateTime,
+                      method = "linear")$y
+
+# Temperature difference (shallow - deep)
+temp_diff <- DST_ref1$Temp - ref2_interp
+
+# Summary statistics
+cat(sprintf("Mean bias:  %.3f °C\n", mean(temp_diff, na.rm = TRUE)))
+cat(sprintf("SD:         %.3f °C\n", sd(temp_diff,   na.rm = TRUE)))
+cat(sprintf("Range:      %.3f to %.3f °C\n", 
+            min(temp_diff, na.rm = TRUE), 
+            max(temp_diff, na.rm = TRUE)))
+
+# Time series plot
+par(mfrow = c(2, 1), mar = c(2, 4, 1, 1))
+
+plot(DST_ref1$DateTime, temp_diff,
+     type = "l", col = "steelblue", lwd = 0.8,
+     xlab = "", ylab = "Temp difference (°C)",
+     main = "Shallow minus Deep temperature (DST Ref1 - Ref2)")
+abline(h = 0,                          lty = 2)
+abline(h = mean(temp_diff, na.rm = TRUE), col = "red", lwd = 1.5)
+
+# Rolling daily mean to show seasonal trend
+daily_diff <- tapply(temp_diff,
+                     as.Date(DST_ref1$DateTime),
+                     mean, na.rm = TRUE)
+
+plot(as.Date(names(daily_diff)), as.numeric(daily_diff),
+     type = "l", col = "darkred", lwd = 1.5,
+     xlab = "Date", ylab = "Daily mean diff (°C)",
+     main = "Daily mean temperature difference")
+abline(h = 0, lty = 2)
+
+par(mfrow = c(1, 1))
+
+
+
 
 
 
@@ -503,3 +566,4 @@ abline(h = 0, lty = 2)
 
 #----
 # fin.
+

@@ -45,6 +45,9 @@ CO2_ref <- CO2_ref[ CO2_ref$DateTime > as.POSIXct("2025-07-11", tz = "America/Va
 CO2_foc <- trim_foc_maintenance( CO2_foc )
 CO2_ref <- trim_ref_maintenance( CO2_ref )
 
+names(CO2_foc)[2] <- "pCO2"
+names(CO2_ref)[2] <- "pCO2"
+
 #---- Data visualization - Show clean CO2 data range from both moorings ---
 # add columns with the dataset names so we have a legend
 # 2026/09/22: Depreciated. Prefer to plot on separate panels. 
