@@ -32,11 +32,11 @@ era5_df$Timestamp <- format(era5_df$Timestamp, tz = "America/Vancouver", usetz =
 era5_df <- era5_df[, c(-1, -3, -6)] # drop idx, count, and geo
 names( era5_df ) <- c( "DateTime", "SSRD_mean", "SSRD_stdev") 
 
-head(era5_df)
-tail(era5_df)
-
 PAR_df <- calc_par( era5_df )
 DLI_df <- calc_dli( PAR_df )
+
+PAR_df <- trim_deployment( PAR_df )
+DLI_df <- trim_deployment( DLI_df )
 
 head(DLI_df)
 DLI_plot( DLI_df )

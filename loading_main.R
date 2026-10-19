@@ -115,15 +115,9 @@ plot_timeseries( x, metric = "partial CO2 (uatm)")
 
 source( 'C:/Data/Git/LSSM_Water_Analysis/PAR_loading.R')
 # DF: PAR, DLI
-str( PAR_df )
-PAR_df <- trim_deployment( PAR_df )
-
-str( DLI_df )
-DLI_df <- trim_deployment( DLI_df )
-DLI_plot( DLI_df)
 
 source( 'C:/Data/Git/LSSM_Water_Analysis/discrete_sample_loading.R')
-# DF: clean_data
+# DF: disc_data
 str( disc_data )
 
 # Output results from data loading ... 

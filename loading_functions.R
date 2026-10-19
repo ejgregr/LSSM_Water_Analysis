@@ -24,8 +24,8 @@ trim_deployment <- function(df) {
   
   # The Deployment window first ... 
   df <- df[(
-    df$DateTime >= as.POSIXct(sdate, tz = "America/Vancouver") &
-    df$DateTime <= as.POSIXct(edate, tz = "America/Vancouver")
+    as.Date(df$DateTime) >= as.POSIXct(sdate, tz = "America/Vancouver") &
+    as.Date(df$DateTime) <= as.POSIXct(edate, tz = "America/Vancouver")
   ), ]
 
   df
