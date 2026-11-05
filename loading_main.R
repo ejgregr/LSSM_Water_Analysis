@@ -57,7 +57,7 @@ edate <- "2025-09-15" # The day before mooring recovery
 #=== LOAD Previously Saved Observational data ===
 # LOAD 2025 observational data, including PAR/DLI estimates.
 # LAST time RData created = 2026/01/13 by the LSSM_Water_analysis.proj
-input_path <- file.path(results_dir, "kelp_project_data_2026_10_19.RData" )
+input_path <- file.path(results_dir, "kelp_project_data_2026_11_05.RData" )
 load(input_path)
 
 

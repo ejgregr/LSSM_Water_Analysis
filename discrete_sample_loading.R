@@ -9,7 +9,8 @@
 # 2026/10/05: Visited again
 # 2025/10/28: Updated for consistency 
 # 2026/10: Integrated with the LSSM_Water_Analysis project
-# 2026/11/05: Corrected time stamp
+# 2026/11/05: Corrected time stamp; added adjusted TCO2 and TA to discrete 
+#   sample output to confirm seacarb() parameters in Chemistry submodel.
 #===============================================================================
 
 #---- Part 1: Load and format the excel data for analysis. -------------------------------
@@ -24,8 +25,8 @@ names( raw_data )
 
 # Pull and simplify names of a relevant subset of data
 clean_data <- raw_data[, c("Station_ID", "Collection_Date", "Collection_Time_PST",
-                           "NIST_Temp", "YSI_S", "pCO2@insituT (uatm)", "pH (total)", "Omega_Arag")]
-colnames(clean_data) <- c("Station", "Date", "Time", "Temp", "Salinity", "pCO2", "pH", "OArag")
+                           "NIST_Temp", "YSI_S", "Adj. TCO2", "TA (umol/kg)", "pCO2@insituT (uatm)", "pH (total)", "Omega_Arag")]
+colnames(clean_data) <- c("Station", "Date", "Time", "Temp", "Salinity", "TCO2_lab", "TA_lab", "pCO2", "pH", "OArag")
 
 #--- 
 # SOME DATA CLEAN UP required at this point to either drop samples, or 
