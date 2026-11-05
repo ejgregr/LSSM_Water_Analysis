@@ -496,10 +496,12 @@ par(mfrow = c(1, 1))
 
 #---- Part 2c - Check effect of depth on temperature bias. 
 
-compare_sensors( DST_ref1, DST_ref2, "Temperature", "Ref1", "Ref2" )
+compare_sensors( DST_ref1, DST_ref2, "Temp", "Ref1", "Ref2" )
 
+compare_sensors( DST_ref2, DST_ref1, "Temperature", "Ref1", "Ref2" )
 
-
+head( DST_ref1)
+head( DST_ref2)
 
 # BOX PLOT of DEPTHS
 # Combine DST depth data with sensor labels
