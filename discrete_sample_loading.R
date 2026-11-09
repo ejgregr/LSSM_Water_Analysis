@@ -26,7 +26,7 @@ names( raw_data )
 # Pull and simplify names of a relevant subset of data
 clean_data <- raw_data[, c("Station_ID", "Collection_Date", "Collection_Time_PST",
                            "NIST_Temp", "YSI_S", "Adj. TCO2", "TA (umol/kg)", "pCO2@insituT (uatm)", "pH (total)", "Omega_Arag")]
-colnames(clean_data) <- c("Station", "Date", "Time", "Temp", "Salinity", "TCO2_lab", "TA_lab", "pCO2", "pH", "OArag")
+colnames(clean_data) <- c("Station", "Date", "Time", "T_lab", "S_lab", "TCO2_lab", "TA_lab", "pCO2_lab", "pH_lab", "OArag_lab")
 
 #--- 
 # SOME DATA CLEAN UP required at this point to either drop samples, or 
@@ -51,7 +51,7 @@ clean_data$Station <- gsub("\\s*[iI][nN]$", "_In", clean_data$Station)
 clean_data$Station <- gsub("\\s*[oO][uU][tT]$", "_Out", clean_data$Station)
 
 # Temp to number, and then the whole thing as a dataframe  
-clean_data$Temp <- as.numeric( clean_data$Temp )
+clean_data$T_lab <- as.numeric( clean_data$T_lab )
 disc_data <- as.data.frame(clean_data)
 rm( clean_data )
 # Check dataframe
