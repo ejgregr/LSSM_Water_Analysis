@@ -34,7 +34,7 @@ This information was obtained from sources created by Wiley. The first is a moor
   
 Two moorings were deployed on April 24, 2025, one at the focal site (CP) at 1741, and one at the reference site (R8) at 1906. Each mooring had a CO2Pro sensor, a Star-ODDI, and a MiniDOT. Sampling rates were 240 minutes, 3 minutes, and 1 minute respectively.  
   
-Moorings were serviced Jun 12, July 10, and Aug 25th, and recovered on Sept 17.
+Moorings were serviced Jun 12, July 10, and recovered on Sept 17. Planned service on Aug 25th was cancelled due to weather.
 
 Sensor IDs for the reference mooring were: CO2Pro = 43-214-75, Star-ODDI = S12665, and MiniDOT = 801016.  
 Sensor IDs for the focal mooring were: CO2Pro = 43-213-75, Star-ODDI = S12074, and MiniDOT = 315342.

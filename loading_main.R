@@ -13,11 +13,12 @@
 # June 2026.
 #   Initially included only earlier BATI data and CO2 from MV Columbia. 
 #   Updated to include the field data from the 2025 Broughton work, 
-#   as well as 2025 tide height  and PAR (solar) data sets for driving the ODE kelp model. 
+#   as well as 2025 tide height and PAR (solar) data sets for driving the ODE kelp model. 
 # 2026/06/23: After a hiatus, backfilling and documenting before moving forward.
 #  Repaired DST temperature data 
 # 2026/09/08: Code review taken up again after summer.
-
+# 2026/11/18: Working thru downstream code. 
+#   Tides added to data product. Settled on Cedar Isl. over Alert Bay as source.
 #========================== Load required packages ============================
 # check for any required packages that aren't installed and install them
 required.packages <- c( "readxl", "readr", "ggplot2", "tidyr", "dplyr", "stringr", "lubridate", "ggtext",
@@ -56,12 +57,12 @@ edate <- "2025-09-15" # The day before mooring recovery
 
 #=== LOAD Previously Saved Observational data ===
 # LOAD 2025 observational data, including PAR/DLI estimates.
-# LAST time RData created = 2026/01/13 by the LSSM_Water_analysis.proj
-input_path <- file.path(results_dir, "kelp_project_data_2026_11_05.RData" )
+input_path <- file.path(results_dir, "kelp_project_data_2026_11_24.RData" )
 load(input_path)
 
 
 #---- Load, prep, and save individual project data sets. 
+source( 'C:/Data/Git/LSSM_Water_Analysis/loading_tides.r')
 
 # Star-Oddi sensors. 2 focal and 2 ref.
 source( 'C:/Data/Git/LSSM_Water_Analysis/DST_loading.R')
@@ -121,17 +122,15 @@ str( disc_data )
 
 # Output results from data loading ... 
 
-df_names <- c( "CO2_foc", "CO2_ref", 
+df_names <- c( "tides", "CO2_foc", "CO2_ref", 
                "DST_foc1", "DST_foc2", "DST_ref1", "DST_ref2", 
                "mdot_foc", "mdot_ref", 
                "DLI_df", "PAR_df", "disc_data" )
 
-save(list = df_names, file = file.path(results_dir, "/kelp_project_data_2026_11_09.RData"))
+save(list = df_names, file = file.path(results_dir, "/kelp_project_data_2026_11_24.RData"))
 
-# To load in a new script:
-# load("kelp_project_data.RData")
-
-file.info(file.path(results_dir, "/kelp_project_data_2026_10_19.RData"))$mtime
+# when was a file created ... 
+file.info(file.path(results_dir, "/kelp_project_data_2026_11_09.RData"))$mtime
 
 
 #head(DST_focal1)

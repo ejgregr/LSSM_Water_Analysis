@@ -9,38 +9,14 @@
 #   3) Temperature agreement between sensors and discrete samples
 #   4) Effect of depth on temperatures
 #   5) Tidal effects on mooring temps and characterization of Canoe Pass flow
+# 11/18: Replaced Alert Bay tidal data with Cedar Island.
+# 11/23: Reorganizing, grouping, and adding. sigh. 
 #============================================================================
-
-# Support for the analyses 
-source( 'C:/Data/Git/LSSM_Water_Analysis/loading_tides.r')
 
 # *** Ensure all data trimmed to deployment period and maintenance windows ***
 
-#---- Support code to examine sensors at various times to investigate anomalies ----  
-start <- "2025-08-04 09:00:00"
-end   <- "2025-09-01 15:00:00"
-
-str(DST_foc1)
-# Pinch and plot datasets
-x <- DST_foc2[, c("DateTime", "Salinity")]
-y <- DST_foc1[, c("DateTime", "Salinity")]
-
-x$Dataset <- "DST Foc2"
-y$Dataset <- "DST Foc1"
-plot_dat <- rbind(x, y )
-
-#two_series_plot( plot_dat, "Salinity", "Salinity", "", sdate = start, edate = end)
-
-
-
-#------- Part 1 Temperature coherence across sensors --------------------
-# Initial concern was that Mooring temps were initially unreasonably high. 
-# Led to sorting out problems with the data loading.
-# That and and trimming to maintenance windows removed the temp anomalies.
-max(mdot_foc$Temp ); max(DST_foc1$Temp ); max(DST_foc2$Temp )
-max(mdot_ref$Temp ); max(DST_ref1$Temp ); max(DST_ref2$Temp )
-
-#--- Deviation function - only for n>=3 sensors in the series list
+#----------------------- Functions for sections below --------------------------
+#--- Deviation function - only for n>=3 sensors in a pre-defined series list
 calc_deviations <- function( series_list ) {
   
   longest    <- series_list[[which.max(sapply(series_list, function(s) nrow(s$df)))]]
@@ -102,7 +78,7 @@ plot_tvar_vs_tides <- function( rolldevs, tides ) {
   plot_tdev <- data.frame(Date = as.POSIXct(names(daily_tdev_sd)), sd = as.numeric(daily_tdev_sd))
   
   #--- dampen tidal data  and prep df ...
-  daily_tide_range <- tapply(tides$tide_m, as.Date(tides$DateTime), function(x)
+  daily_tide_range <- tapply(tides$Metres, as.Date(tides$DateTime), function(x)
     diff(range(x, na.rm = TRUE)))
   
   plot_tides <- data.frame(Date    = as.POSIXct(names(daily_tide_range)),
@@ -158,19 +134,52 @@ plot_tvar_vs_tides <- function( rolldevs, tides ) {
   return( c( plot_tdev, plot_tides ) )
 }
 
-# Deviation is synchronous among sensors so move forward with mdot only. 
 
+#---- Examine pairs of sensors at specified times to investigate anomalies----  
 
+# Select sensors 
+x <- DST_foc1[, c("DateTime", "Salinity")]
+y <- DST_foc2[, c("DateTime", "Salinity")]
+
+# Build structure 
+x$Dataset <- "DST Foc1"
+y$Dataset <- "DST Foc2"
+plot_dat <- rbind(x, y )
+
+# Temporal window and plot 
+tstart <- "2025-08-04 09:00:00"
+tend   <- "2025-09-01 15:00:00"
+two_series_plot( plot_dat, "Salinity", "Salinity", "", sdate = tstart, edate = tend)
+
+#------- Part 1 Temperature coherence across sensors --------------------
+# Initial concern was that Mooring temps were unreasonably high. 
+# Led to sorting out problems with the data loading.
+# Repaired data loading and trimming to maintenance windows solved main temp anomalies.
+max(mdot_foc$Temp ); max(DST_foc1$Temp ); max(DST_foc2$Temp )
+max(mdot_ref$Temp ); max(DST_ref1$Temp ); max(DST_ref2$Temp )
+
+#--- Examine deviations across temperature sensors
+my_series <- list(
+  list(df = mdot_foc,  var = "Temp", label = "MiniDOT Focal"),
+  list(df = DST_foc1,  var = "Temp", label = "DST Focal 1"),
+  list(df = DST_foc2,  var = "Temp", label = "DST Focal 2")
+)
+
+deviations  <- calc_deviations( my_series )
+dev_results <- plot_deviations(deviations, metric = "°C")
+# Deviation is synchronous among sensors so further validation with mdot only. 
 
 #------- Part 2 Spectral analysis of temperature deviations ----
 # Examine periodicity in temperature deviation
-# Next question is why the deviance was low during some time periods.
 
-dt_hours <- 5/60  # 5-minute sampling in hours
+# temporal resolution for spectral analysis - based on deviations df.
+dt_hours <- 1/60  # 1-minute sampling in hours
 
-spec_out <- spec.pgram(deviations[!is.na(deviations[, "mdot_foc"]), "mdot_foc"],
-                       spans = c(11, 11),
-                       plot  = FALSE)
+x <- deviations$deviations
+y <- x[ !is.na( x[, "MiniDOT Focal"]), "MiniDOT Focal"]
+
+spec_out <- spec.pgram(y, spans = c(11, 11),
+                          plot  = FALSE)
 
 plot(spec_out$freq / dt_hours, spec_out$spec,
      type = "l", log  = "xy",
@@ -184,46 +193,119 @@ abline(v = 1/23.9345, col = "blue", lty = 2)  # K1
 legend("topright", legend = c("M2", "K1"),
        col = c("red", "blue"), lty = 2, bty = "n")
 
-#--> clear signal of M2 forcing, K21 also evident, as is seasonal warming and 
+#--> clear signal of M2 forcing, K1 also evident, as is seasonal warming and 
 # variable (wind-driven?) mixing intensity. More tide work in Part 3.
 
 
+#------- Part 3 Temperature vs. tidal range ------------------------
 
-#------- Part 3 Temperature variance vs. tidal range ------------------------
-#--- Check deviations across FOCAL temperatures 
-my_series <- list(
-  list(df = mdot_foc,  var = "Temp", label = "MiniDOT Focal"),
-  list(df = DST_foc1,  var = "Temp", label = "DST Focal 1"),
-  list(df = DST_foc2,  var = "Temp", label = "DST Focal 2") 
-)
-
-# Calculate deviance for selected sensors 
-deviations  <- calc_deviations( my_series )
-plot_deviations( deviations )
-
-# Create matching tidal predictions for plotting 
+#---- Part 1 of 3 ... 
+# Using deviations from above, create corresponding time df for tidal predictions 
 tides_1min <- predict_tides(tides, data.frame(DateTime = deviations$t_grid))
+
+#---- Part 2 ... 
+# Build tdevs df for analysis, Calculate a rolling SD to dampen variability across deployment.
 
 #---- Create deviation|tide frame for analysis
 tdevs <- data.frame(
   DateTime = tides_1min$DateTime,
-  tide_m   = tides_1min$tide_m,
+  Metres   = tides_1min$Metres,
   mdot_dev = deviations$deviations[, "MiniDOT Focal"]
 )
 
-
-#---- Calculate a rolling SD of ONE sensor to dampen variability in the full deployment. ----
 # Rolling SD of selected sensor deviation from ensemble mean
 # Resolution: win <- 12 * 12  # 12 hours at 5-min resolution
 win <- 12 * 60  # 12 hours at 1-min resolution (M2 frequency is 12.4) as per deviance data)
 library(zoo)
-devs <- tdevs$mdot_ref
+devs <- tdevs$mdot_dev
 roll_tdev_sd <- rollapply(devs, width = win, FUN = sd, na.rm = TRUE, fill = NA)
 
-
-#---- Plot temperature range variance vs. tidal range : MDOT, Focal  --------
-# AND return the smoothed data for correlation analysis
+#Plot temperature range SD (variance) vs. tidal range AND return the smoothed data for correlation analysis
 sm_dev <- plot_tvar_vs_tides(roll_tdev_sd, tides_1min )
+
+
+Part 3 ... 
+
+
+# Nov 23: Because REF site only has a single sensor, use range instead of SD from above. 
+# Plotting SD with smoothed code removed. See the 'old' script. 
+#---- Tidal range vs daily temperature range: Reference and Focal sites ----
+# Uses daily T range as 2 sensors are insufficient for deviance from the mean.
+
+library(zoo)
+
+# Daily range of a variable; NA if a day has < min_frac of expected samples
+daily_range <- function(df, var = "Temp", min_frac = 0.5) {
+  dt_sec <- median(diff(as.numeric(df$DateTime)), na.rm = TRUE)
+  n_full <- 86400 / dt_sec
+  d      <- format(df$DateTime, "%Y-%m-%d")
+  r      <- tapply(df[[var]], d, function(v)
+    if (sum(!is.na(v)) < min_frac * n_full) NA
+    else diff(range(v, na.rm = TRUE)))
+  data.frame(Date = as.Date(names(r)), range = as.numeric(r))
+}
+
+
+# Create a tide prediction for the deployment period ... 
+tgrid      <- data.frame(DateTime = seq(as.POSIXct(sdate), as.POSIXct(edate), by = "1 min"))
+tides_1min <- daily_range( predict_tides(tides, tgrid), var = "Metres" )
+
+
+k <- 2   # smoothing window (days); keep << 14.8 d spring-neap period
+
+ref_rng  <- daily_range(DST_ref1)
+foc_rng  <- daily_range(DST_foc1)
+tide_rng <- tides_1min
+
+names(ref_rng)[2]  <- "ref"
+names(foc_rng)[2]  <- "foc"
+names(tide_rng)[2] <- "tide"
+
+daily <- merge(tide_rng, ref_rng, by = "Date", all = TRUE)
+daily <- merge(daily,    foc_rng, by = "Date", all = TRUE)
+
+# Ensure a continuous daily sequence so the rolling window spans real days
+all_days <- data.frame(Date = seq(min(daily$Date), max(daily$Date), by = "day"))
+daily    <- merge(all_days, daily, by = "Date", all.x = TRUE)
+
+smooth_k <- function(x, k) rollapply(x, width = k, FUN = mean, na.rm = TRUE,
+                                     fill = NA, align = "center")
+daily$ref_s <- smooth_k(daily$ref, k)
+daily$foc_s <- smooth_k(daily$foc, k)
+
+# Plot
+ylim_temp <- range(c(daily$ref_s, daily$foc_s), na.rm = TRUE)
+ylim_tide <- range(daily$tide, na.rm = TRUE)
+
+par(mfrow = c(1, 1), mar = c(5, 4, 4, 4) + 0.1)
+plot(daily$Date, daily$tide,
+     type = "l", col = "grey", lwd = 2,
+     xlab = "Date", ylab = "Daily Tidal Range (m)", ylim = ylim_tide,
+     main = paste0("Daily Tidal Range vs Temperature Range (", k, "-day mean)"))
+
+par(new = TRUE)
+plot(daily$Date, daily$ref_s,
+     type = "l", col = "orange", lwd = 2,
+     axes = FALSE, xlab = "", ylab = "", ylim = ylim_temp)
+lines(daily$Date, daily$foc_s, col = "steelblue", lwd = 2)
+
+axis(side = 4)
+mtext("Daily Temperature Range (°C)", side = 4, line = 3)
+
+legend("topleft",
+       legend = c("Tidal range", "Reference site", "Focal site"),
+       col = c("grey", "orange", "steelblue"),
+       lty = 1, lwd = 2, bty = "n", text.font = 2)
+
+
+#---- Correlations (date-matched)
+pre  <- daily$Date <= as.Date("2025-07-15")
+post <- daily$Date >= as.Date("2025-08-01")
+cor(daily$tide[pre],  daily$ref[pre],  use = "complete.obs")
+cor(daily$tide[post], daily$ref[post], use = "complete.obs")
+cor(daily$tide[pre],  daily$foc[pre],  use = "complete.obs")
+cor(daily$tide[post], daily$foc[post], use = "complete.obs")
+
 
 #---- Correlations btwn tides and temp variance for different periods
 idx <- sm_dev$Date >= as.POSIXct("2025-06-01") # when stratification appears
@@ -232,9 +314,18 @@ cor( sm_dev$t_range[idx], sm_dev$sd[idx], use = "complete.obs")
 idx <- sm_dev$Date >= as.POSIXct("2025-08-15") # highest corr period
 cor( sm_dev$t_range[idx], sm_dev$sd[idx], use = "complete.obs")
 
-#---- Focal-Reference temperature variance comparison. Uses MDOT sensors. ----
-# Comparison based on daily temperature ranges.  
+#---- Correlations btwn tides and temp variance for different periods
+idx <- daily_ref$Date <= as.POSIXct("2025-07-15") # BEFORE stratification appears
+cor( daily_ref$t_range[idx], plot_tides$t_range[idx], use = "complete.obs")
 
+idx <- daily_ref$Date >= as.POSIXct("2025-08-01") # Stratified, negative corr period
+cor( daily_ref$t_range[idx], plot_tides$t_range[idx], use = "complete.obs")
+
+
+#---- Compare variance in temperature ranges between Focal and Reference sites. Uses MDOT sensors. ----
+# Range rather than deviance because its a pair-wise comparision.
+
+# starts with loaded sensor data ... 
 m <- merge(mdot_foc[, c("DateTime", "Temp")], mdot_ref[, c("DateTime", "Temp")],
            by = "DateTime", suffixes = c(".foc", ".ref"))
 
@@ -256,59 +347,8 @@ abline(h = 0, lty = 2)
 abline(h = mean(log2(rf / rr), na.rm = TRUE), col = "red")
 
 
-#---- Make a tidal-temperature range plot for Reference site. ----
-# Uses daily T range as 2 sensors are insufficient for deviance from the mean. 
 
-# Daily temperature range for reference site
-d_ref  <- format(DST_ref1$DateTime, "%Y-%m-%d")
-rng    <- function(v) if (sum(!is.na(v)) < 0.9 * 480) NA else diff(range(v, na.rm = TRUE))
-rf_ref <- tapply(DST_ref1$Temp, d_ref, rng)
-
-daily_ref <- data.frame( Date = as.Date( names(rf_ref) ),
-                      t_range = as.numeric( rf_ref ))
-
-# Daily tidal range
-daily_tide_range <- tapply(tides_1min$tide_m,
-                           as.Date(tides_1min$DateTime),
-                           function(x) diff(range(x, na.rm = TRUE)))
-plot_tides <- data.frame(
-  Date    = as.Date(names(daily_tide_range)),
-  t_range = as.numeric(daily_tide_range)
-)
-# Trim last row
-plot_tides <- plot_tides[-nrow(plot_tides), ]
-
-# Create the plot in base R
-ylim_temp <- range(daily_ref$t_range,  na.rm = TRUE)
-ylim_tide <- range(plot_tides$t_range, na.rm = TRUE)
-
-par(mar = c(5, 4, 4, 4) + 0.1)
-plot(plot_tides$Date, plot_tides$t_range,
-     type = "l", col = "darkorange", lwd = 2,
-     xlab = "Date", ylab = "Daily Tidal Range (m)",
-     ylim = ylim_tide, main = "Daily Tidal Range vs Reference Temperature Variance")
-
-par(new = TRUE)
-plot(daily_ref$Date, daily_ref$t_range,
-     type = "l", col = "darkgreen", lwd = 2, axes = FALSE, xlab = "", ylab = "", ylim = ylim_temp)
-
-axis(side = 4)
-mtext("Daily Temperature Range (°C)", side = 4, line = 3)
-
-legend("topleft",
-       legend = c("Daily Tidal Range (m)", "Daily Temperature Range (°C)"),
-       col    = c("darkorange", "darkgreen"), lty    = 1, lwd = 2, bty = "n", text.font = 2)
-
-#---- Correlations btwn tides and temp variance for different periods
-idx <- daily_ref$Date <= as.POSIXct("2025-07-15") # BEFORE stratification appears
-cor( daily_ref$t_range[idx], plot_tides$t_range[idx], use = "complete.obs")
-
-idx <- daily_ref$Date >= as.POSIXct("2025-08-01") # Stratified, negative corr period
-cor( daily_ref$t_range[idx], plot_tides$t_range[idx], use = "complete.obs")
-
-
-
-#------ Part 4 Coherence across Sensors --------------------
+#------ Part 4 Comparisons across Sensors --------------------
 # A function for pair-wise comparisons 
 compare_sensors <- function(df1, df2, var, 
                             lab1 = "Sensor 1", lab2 = "Sensor 2", pcolor="blue") {
@@ -346,86 +386,20 @@ compare_sensors(DST_ref1, DST_ref2, "Temp", "DST Ref 1", "DST Ref 2", "darkgreen
 compare_sensors(DST_foc1, DST_foc2, "Temp", "DST Focal 1", "DST Focal 2")
 par(mfrow = c(1, 1))
 
+#--- Depth 
 
-#------ Part 5 Periodicity in Temperature deviation ------------------------
-# Spectral analysis of periodicity in temperature deviation.
-# Deviation is synchronous among sensors so move forward with mdot only. 
-# Next question is why the deviance was low during some time periods. See Part 3 below.
 
-#---- Set resolution of deviation analysis
-dt_hours <- 5/60  # 5-minute sampling in hours
+#------ Part 5 Cross-correlation analysis to establish tidal propagation lag at focal site ---------
 
-# Estimate the spectral density of the deviations. 
-spec_out <- spec.pgram(deviations[!is.na(deviations[, "mdot_foc"]), "mdot_foc"],
-                       spans = c(11, 11),
-                       plot  = FALSE)
-
-plot(spec_out$freq / dt_hours, spec_out$spec,
-     type = "l", log  = "xy",
-     xlab = "Frequency (cycles per hour)",
-     ylab = "Spectrum",
-     main = "Spectrum of mdot_foc deviations")
-
-# Mark M2 and K1 frequencies
-abline(v = 1/12.4206, col = "red",  lty = 2)  # M2
-abline(v = 1/23.9345, col = "blue", lty = 2)  # K1
-legend("topright", legend = c("M2", "K1"),
-       col = c("red", "blue"), lty = 2, bty = "n")
-
-#--> clear signal of M2 forcing, K21 also evident, as is seasonal warming and 
-# variable (wind-driven?) mixing intensity. More tide work in Part 3.
-
-#---  Cross-correlation analysis to establish tidal propagation lag at focal site ---------
-# Create a 1 min tidal prediction to examine tidal lag with MDOT focal temp
-tides_1min <- predict_tides(tides, mdot_foc)
+# Created fro spectral analysis above.
+str(tides_1min) 
 
 mdot_cc        <- mdot_foc
-mdot_cc$tide   <- tides_1min$tide_m
+mdot_cc$tide   <- tides_1min$Metres
 mdot_cc        <- mdot_cc[complete.cases(mdot_cc[, c("Temp", "tide")]), ]
 
 # Detrend both series to remove seasonal signal
-mdot_cc$Temp_dt <- residuals(loess(Temp ~ as.numeric(DateTime), data = mdot_cc, span = 0.1))
-mdot_cc$tide_dt <- residuals(loess(tide ~ as.numeric(DateTime), data = mdot_cc, span = 0.1))
 
-# CCF: negative lag = tide leads temperature
-ccf(mdot_cc$tide_dt, mdot_cc$Temp_dt,
-    lag.max = 360,
-    main    = "CCF: Detrended Tide vs Temperature — Focal Site",
-    ylab    = "CCF",
-    xlab    = "Lag (observations at 1-min resolution)")
-
-# Peak negative lag ~240 observations = 4 hours at 1-min resolution
-# peak_lag_obs <- 240
-# peak_lag_hrs <- peak_lag_obs / 60
-# cat(sprintf("Tidal propagation lag: ~%.1f hours\n", peak_lag_hrs))
-
-# REFERENCE: Interpolate tidal predictions to mdot_ref timestamps
-# Create a 1 min tidal prediction to examine tidal lag with MDOT reference emp
-tides_1min <- predict_tides(tides, mdot_ref)
-
-mdot_cc        <- mdot_ref
-mdot_cc$tide   <- tides_1min$tide_m
-mdot_cc        <- mdot_cc[complete.cases(mdot_cc[, c("Temp", "tide")]), ]
-
-# Detrend both series to remove seasonal signal
-mdot_cc$Temp_dt <- residuals(loess(Temp ~ as.numeric(DateTime), data = mdot_cc, span = 0.1))
-mdot_cc$tide_dt <- residuals(loess(tide ~ as.numeric(DateTime), data = mdot_cc, span = 0.1))
-
-# CCF: negative lag = tide leads temperature
-ccf(mdot_cc$tide_dt, mdot_cc$Temp_dt,
-    lag.max = 360,
-    main    = "CCF: Detrended Tide vs Temperature — Reference Site",
-    ylab    = "CCF",
-    xlab    = "Lag (observations at 1-min resolution)")
-
-# Peak negative lag ~240 observations = 4 hours at 1-min resolution
-# peak_lag_obs <- 240
-# peak_lag_hrs <- peak_lag_obs / 60
-# cat(sprintf("Tidal propagation lag: ~%.1f hours\n", peak_lag_hrs))
-
-#---- Interpreting the CCF results 
-mean( mdot_ref$Temp )
-mean( mdot_foc$Temp )
 
 
 
@@ -497,8 +471,6 @@ par(mfrow = c(1, 1))
 #---- Part 2c - Check effect of depth on temperature bias. 
 
 compare_sensors( DST_ref1, DST_ref2, "Temp", "Ref1", "Ref2" )
-
-compare_sensors( DST_ref2, DST_ref1, "Temperature", "Ref1", "Ref2" )
 
 head( DST_ref1)
 head( DST_ref2)

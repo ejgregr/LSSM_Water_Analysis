@@ -1,9 +1,12 @@
 # #============================================================================
 # Script:  loading_tides.R
+# Created: Late 2025
+# Updated: 2026/11/18
 # Purpose: Code and support functions to Load, model, and scale tides to support analysis. 
-# Load tidal data and examine role with respect to temperature and flow thru Canoe pass. 
-# Includes:
-#   1) 2025 annual tidal observations (predictions?) from Alert Bay.  
+# Load hourly tide heights from a CSV obtained from https://tides.gc.ca/en/stations/08325.
+# The closest station to Village Sea is Cedar Island. A prediction station.
+#Returns:
+#   1) 2020-2028 hourly tide height predictions Cedar Island.  
 #   2) the de-trended tide height vs temperature plot, 
 #   3) the CCF plots of tide vs. temperature at both mooring sites.
 #============================================================================
@@ -29,20 +32,54 @@ plot_prop_lag <- function( temp_df, tides ){
       xlab    = "Lag (observations at 1-min resolution)")
 }
 
-#--------------- FUNCTIONS - Tides and Currents -------------------------------
 load_tidal_data <- function( tfile ){
-  tides <- read.csv( tfile, header = TRUE)
-  names(tides)   <- c("DateTime", "Metres")
-  tides$DateTime <- as.POSIXct(tides$DateTime, format = "%Y-%m-%dT%H:%M:%S", tz = "America/Vancouver")
-  tides$Metres   <- as.numeric(as.character(tides$Metres))
+# Re: Cedar Island data: Both the data file header and the metadata identify the tz 
+# as "Canada/Pacific". However, tests with Claude show that the imported CSV does not
+# correctly adjust for DST. i.e., These times would show the relevant adjustments:
+#   raw[grepl("2025/03/10 0[1-3]", raw$DateTime), ]          # spring forward
+#   raw[grepl("2025/11/03 0[0-2]", raw$DateTime), ]          # fall back
+# --> Indicates file is in fixed PST, despite the metadata. :\
+#     PST is coded as "Etc/GMT+8". That’s UTC−8 with no DST.
   
-  # Trim to mooring deployment period
-  tides <- tides[tides$DateTime >= as.POSIXct(sdate, tz = "America/Vancouver") &
-                   tides$DateTime <= as.POSIXct(edate, tz = "America/Vancouver"), ]
-  
+# Skip the header lines and assign column names.
+  df <- read.csv( tfile, header = FALSE, stringsAsFactors = FALSE,
+                  skip = 7, col.names = c("DateTime", "Metres") )
+    # Parse datetime
+  df$DateTime <- as.POSIXct(df$DateTime, format = "%Y/%m/%d %H:%M", tz = "Etc/GMT+8")
+  df
 }
 
-load_current_data <- function(filename, tz = "UTC") {
+# Predict tide heights at for specified time intervals (target_df).
+predict_tides <- function(tides, target_df) {
+  
+  t0 <- min(tides$DateTime)
+  tides$hours <- as.numeric(difftime(tides$DateTime, t0, units = "hours"))
+  
+  # Tidal constituent periods (hours)
+  M2 <- 12.4206
+  S2 <- 12.0000
+  K1 <- 23.9345
+  O1 <- 25.8194
+  
+  harm_fit <- lm(Metres ~ 
+                   sin(2*pi*hours/M2) + cos(2*pi*hours/M2) +
+                   sin(2*pi*hours/S2) + cos(2*pi*hours/S2) +
+                   sin(2*pi*hours/K1) + cos(2*pi*hours/K1) +
+                   sin(2*pi*hours/O1) + cos(2*pi*hours/O1),
+                 data = tides)
+  
+  # Predict at target timestamps
+  hours_out <- as.numeric(difftime(target_df$DateTime, t0, units = "hours"))
+  pred_df   <- data.frame(hours = hours_out)
+  
+  data.frame(
+    DateTime  = target_df$DateTime,
+    Metres    = predict(harm_fit, newdata = pred_df)
+  )
+}
+
+load_current_data <- function(filename, tz = "America/Vancouver") {
+# *NOT YET REVIEWED FOR TIME HANDLING*
   
   # Read all lines
   lines <- readLines(filename)
@@ -96,40 +133,10 @@ interp_temp <- function(df, t_grid) {
 }
 
 
-# Predict tide heights from Alert Bay data to 5 minute time intervales from sensors.
-predict_tides <- function(tides, target_df) {
-  
-  t0 <- min(tides$DateTime)
-  tides$hours <- as.numeric(difftime(tides$DateTime, t0, units = "hours"))
-  
-  # Tidal constituent periods (hours)
-  M2 <- 12.4206
-  S2 <- 12.0000
-  K1 <- 23.9345
-  O1 <- 25.8194
-  
-  harm_fit <- lm(Metres ~ 
-                   sin(2*pi*hours/M2) + cos(2*pi*hours/M2) +
-                   sin(2*pi*hours/S2) + cos(2*pi*hours/S2) +
-                   sin(2*pi*hours/K1) + cos(2*pi*hours/K1) +
-                   sin(2*pi*hours/O1) + cos(2*pi*hours/O1),
-                 data = tides)
-  
-  # Predict at target timestamps
-  hours_out <- as.numeric(difftime(target_df$DateTime, t0, units = "hours"))
-  pred_df   <- data.frame(hours = hours_out)
-  
-  data.frame(
-    DateTime  = target_df$DateTime,
-    tide_m    = predict(harm_fit, newdata = pred_df)
-  )
-}
-
-#---- set of functions to define flow direction and windows ----
+#---- group of functions to process current direction, speed, and tide windows
 classify_ebb_flood <- function(df,
                                flood_range = c(315, 45),
                                ebb_range   = c(135, 225)) {
-  
   dir <- df$Direction
   
   # Flood sector spans across 360 → handle wrap-around
@@ -142,6 +149,7 @@ classify_ebb_flood <- function(df,
   df$FlowState <- state
   df
 }
+
 detect_transitions <- function(df) {
   state <- df$FlowState
   
@@ -156,6 +164,7 @@ detect_transitions <- function(df) {
     To         = state[transitions]
   )
 }
+
 make_flow_windows <- function( transitions, series_start = NULL, series_end = NULL) {
   stopifnot(all(c("Timestamp", "From", "To") %in% names(transitions)))
   
@@ -240,6 +249,7 @@ make_flow_windows <- function( transitions, series_start = NULL, series_end = NU
   )
   out
 }
+
 speed_by_window <- function(windows, tide) {
   
   # Ensure time columns are POSIXct
@@ -287,11 +297,38 @@ speed_by_window <- function(windows, tide) {
 
 
 #---------------------------- Build some things  ------------------------------
-#---- Load 2025 Alert Bay tide heights
-tide_file <- paste0(source_dir, "/tidalflow/Annual_Predictions_Alert Bay_2025.csv")
-tides <- load_tidal_data( tide_file )
+# Settled on predictions from Cedar Island (some earlier work used Alert Bay). 
+# Source file contains hourly predictions for Cedar Island for 2020 to 2025. 
+
+#---- Load Cedar Island tide heights (2020 to 2028)
+tides <- load_tidal_data( paste0(source_dir, 
+                                 "/tidalflow/cedar_island_tides_2020to2028.csv") )
 
 
+attr(tides$DateTime, "tzone") <- "America/Vancouver"   # display only
+
+
+#--- Some plotting of what we've done.
+# First, Nov Fall back period
+p_tides <- subset(tides, DateTime >= as.POSIXct("2025-11-01", tz = "America/Vancouver") &
+                         DateTime  < as.POSIXct("2025-11-04", tz = "America/Vancouver"))
+#   raw[grepl("2025/03/10 0[1-3]", raw$DateTime), ]          # spring forward
+#   raw[grepl("2025/11/03 0[0-2]", raw$DateTime), ]          # fall back
+
+plot(p_tides$DateTime, p_tides$Metres, type = "l",main = "Cedar Island Water Level (November 2025)",
+     xlab = "Date", ylab = "Water Level (m)")
+
+# Just 1 week ... 
+p_tides <- subset(tides, DateTime >= as.POSIXct("2025-07-01", tz = "America/Vancouver") &
+                         DateTime  < as.POSIXct("2025-07-13", tz = "America/Vancouver"))
+
+plot(p_tides$DateTime, p_tides$Metres, type = "l", main = "Cedar Island Water Level (July 2025)",
+     xlab = "Date", ylab = "Water Level (m)")
+
+
+# Trim the tidal data to the deployment period
+tides <- subset(tides, DateTime >= as.POSIXct( sdate, tz = "America/Vancouver") &
+                       DateTime  < as.POSIXct( edate, tz = "America/Vancouver"))
 
 
 # fin.
